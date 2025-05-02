@@ -155,7 +155,7 @@ function drawTextLines(ctx, lines, config) {
         const y = config.topPadding + index * config.lineHeight;
         const isCommented = line.trim().startsWith("//");
         
-        // 空行の場合は処理をスキップ
+        // 空行はスキップ
         if (isEmptyLine(line)) return;
         
         // チェックボックス
@@ -174,6 +174,15 @@ function drawTextLines(ctx, lines, config) {
         ctx.beginPath();
         ctx.rect(config.leftPadding, y - config.checkboxSize, config.checkboxSize, config.checkboxSize);
         ctx.stroke();
+
+        // 先頭の//と行末の,を削除
+        let displayText = line;
+        if (isCommented) {
+            displayText = line.trim().replace(/^\s*\/\/\s*/, '');
+        }
+        if (displayText.trim().endsWith(',')) {
+            displayText = displayText.substring(0, displayText.lastIndexOf(','));
+        }
         
         // テキスト描画
         if (isCommented) {
@@ -181,7 +190,6 @@ function drawTextLines(ctx, lines, config) {
         } else {
             ctx.fillStyle = "#ffffff";
         }
-        const displayText = isCommented ? line.trim().replace(/^\s*\/\/\s*/, '') : line;
         ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.checkboxOffset, y);
     });
-} 
+}
