@@ -28,6 +28,9 @@ class PromptCheckList:
             # コメント行は除外
             if line.strip().startswith("//"):
                 continue
+            # 行内コメントを削除
+            if "//" in line:
+                line = line.split("//")[0].rstrip()
             # カンマを追加
             if not line.strip().endswith(","):
                 line = line + ", "
