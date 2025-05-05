@@ -3,6 +3,8 @@
 This is a custom node for ComfyUI that makes prompt editing a little easier.
 You can easily switch phrases for prompts with just mouse operations.
 
+![Example](examples/example-01.png)
+
 ## Features
 
 - Toggle phrases by turning checkboxes on and off
@@ -20,6 +22,7 @@ You can easily switch phrases for prompts with just mouse operations.
 2. Edit text:
    - Click the Edit button to switch to edit mode
    - Enter one phrase per line
+     ![Edit mode example](examples/example-02-editing.png)
    - Click the Save button to complete editing
 3. Toggle phrases:
    - Toggle checkboxes in display mode to select which phrases to use
