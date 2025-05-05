@@ -1,7 +1,6 @@
 # ComfyUI PromptPalette
 
-This is a custom node for ComfyUI that makes prompt editing a little easier.
-You can easily switch phrases for prompts with just mouse operations.
+A custom node for ComfyUI that makes prompt editing easier by allowing phrase switching with just mouse operations
 
 ![Example](examples/example-01.png)
 
