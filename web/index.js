@@ -1,7 +1,5 @@
-// ComfyUI-Test extension
 import { app } from "../../scripts/app.js";
 
-// 拡張機能を登録
 app.registerExtension({
     name: "PromptPalette",
     
@@ -20,7 +18,6 @@ app.registerExtension({
         }
     },
 
-    // ノード作成時
     extendNodeCreatedCallback(nodeType, config, app) {
         const origOnNodeCreated = nodeType.prototype.onNodeCreated;
         
@@ -32,15 +29,12 @@ app.registerExtension({
             const textWidget = findTextWidget(this);
             if (textWidget) {
                 textWidget.hidden = true;
-                // 編集ボタンを追加
                 addEditButton(this, textWidget, app);
-                // チェックボックスのクリックイベントハンドラ
                 setupClickHandler(this, textWidget, config, app);
             }
         };
     },
 
-    // ノード描画時
     extendDrawForegroundCallback(nodeType, config, app) {
         const origOnDrawForeground = nodeType.prototype.onDrawForeground;
         
@@ -48,7 +42,7 @@ app.registerExtension({
             if (origOnDrawForeground) {
                 origOnDrawForeground.call(this, ctx);
             }
-            // 編集モードでない場合にテキストを描画
+            // Draw text when not in edit mode
             const textWidget = findTextWidget(this);
             if (textWidget && !this.isEditMode) {
                 drawTextContent(this, ctx, textWidget, config, app);
@@ -57,7 +51,6 @@ app.registerExtension({
     }
 });
 
-// テキストウィジェットを検索するヘルパー関数
 function findTextWidget(node) {
     if (!node.widgets) return null;
     for (const w of node.widgets) {
@@ -68,7 +61,6 @@ function findTextWidget(node) {
     return null;
 }
 
-// 編集ボタン
 function addEditButton(node, textWidget, app) {
     const textButton = node.addWidget("button", "Edit", "edit_text", () => {
         node.isEditMode = !node.isEditMode;
@@ -78,17 +70,15 @@ function addEditButton(node, textWidget, app) {
     });
 }
 
-// 空行かどうかをチェック
 function isEmptyLine(line) {
     return line.trim() === "";
 }
 
-// クリックイベントハンドラ
 function setupClickHandler(node, textWidget, config, app) {
     node.onMouseDown = function(e, pos) {
         if (this.isEditMode) return;
         
-        // クリックされた行番号を計算
+        // Calculate the clicked line number
         const relativeY = pos[1] - (config.topPadding - config.lineHeight);
         let clickedLineIndex = Math.floor(relativeY / config.lineHeight);
         
@@ -96,7 +86,7 @@ function setupClickHandler(node, textWidget, config, app) {
         if (clickedLineIndex < 0 || clickedLineIndex >= textLines.length) return;
         if (isEmptyLine(textLines[clickedLineIndex])) return;
         
-        // クリック位置がチェックボックス内か確認
+        // Check if the click is within the checkbox
         const relativeX = pos[0];
         const checkboxRight = config.leftPadding + config.checkboxSize;
         if (relativeX >= config.leftPadding && relativeX <= checkboxRight) {
@@ -107,7 +97,6 @@ function setupClickHandler(node, textWidget, config, app) {
     };
 }
 
-// 行のコメントを切り替え
 function toggleCommentOnLine(textLines, lineIndex) {
     const line = textLines[lineIndex];
     
@@ -118,9 +107,8 @@ function toggleCommentOnLine(textLines, lineIndex) {
     }
 }
 
-// テキストコンテンツ
 function drawTextContent(node, ctx, textWidget, config, app) {
-    // ノードが折りたたまれている場合は非表示
+    // Skip if node is collapsed
     if (node.flags && node.flags.collapsed) {
         return;
     }
@@ -128,7 +116,7 @@ function drawTextContent(node, ctx, textWidget, config, app) {
     const text = textWidget.value || "";
     const lines = text.split('\n');
     
-    // ノードのサイズをテキストの行数に合わせて調整
+    // Adjust node size to match text line count
     const textHeight = Math.max(config.minHeight, config.topPadding + lines.length * config.lineHeight + 10);
     
     if (node.size[1] < textHeight) {
@@ -136,29 +124,28 @@ function drawTextContent(node, ctx, textWidget, config, app) {
         app.graph.setDirtyCanvas(true);
     }
 
-    // テキスト設定
+    // Text settings
     ctx.font = "14px monospace";
     ctx.textAlign = "left";
     if (text.trim() !== "") {
         drawTextLines(ctx, lines, config);
     } else {
-        // 空のテキストの場合
+        // If text is empty
         ctx.fillStyle = "#aaaaaa";
         ctx.textAlign = "center";
         ctx.fillText("No Text", node.size[0]/2, node.size[1]/2);
     }
 }
 
-// テキストの各行
 function drawTextLines(ctx, lines, config) {
     lines.forEach((line, index) => {
         const y = config.topPadding + index * config.lineHeight;
         const isCommented = line.trim().startsWith("//");
         
-        // 空行はスキップ
+        // Skip empty lines
         if (isEmptyLine(line)) return;
         
-        // チェックボックス
+        // Checkbox
         ctx.fillStyle = "#AAAAAA";
         ctx.strokeStyle = "#505050";
         ctx.lineWidth = 1;
@@ -175,7 +162,7 @@ function drawTextLines(ctx, lines, config) {
         ctx.rect(config.leftPadding, y - config.checkboxSize, config.checkboxSize, config.checkboxSize);
         ctx.stroke();
 
-        // 先頭の//と行末の,を削除
+        // Remove leading // and trailing ,
         let displayText = line;
         if (isCommented) {
             displayText = line.trim().replace(/^\s*\/\/\s*/, '');
@@ -184,7 +171,7 @@ function drawTextLines(ctx, lines, config) {
             displayText = displayText.substring(0, displayText.lastIndexOf(','));
         }
         
-        // テキスト描画
+        // Draw text
         if (isCommented) {
             ctx.fillStyle = "#777777";
         } else {

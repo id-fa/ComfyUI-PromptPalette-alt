@@ -22,16 +22,16 @@ class PromptPalette:
         lines = text.split("\n")
         filtered_lines = []
         for line in lines:
-            # 空行は除外
+            # Skip empty lines
             if not line.strip():
                 continue
-            # コメント行は除外
+            # Skip commented lines
             if line.strip().startswith("//"):
                 continue
-            # 行内コメントを削除
+            # Remove inline comments
             if "//" in line:
                 line = line.split("//")[0].rstrip()
-            # カンマを追加
+            # Add comma
             if not line.strip().endswith(","):
                 line = line + ", "
             filtered_lines.append(line)
