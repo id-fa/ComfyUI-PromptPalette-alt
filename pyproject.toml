@@ -1,0 +1,14 @@
+[project]
+name = "ComfyUI-PromptPalette"
+description = "A custom node that makes prompt editing easier by allowing phrase switching with just mouse operations."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/kambara/ComfyUI-PromptPalette"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "kambara"
+DisplayName = "ComfyUI-PromptPalette"
+Icon = ""
