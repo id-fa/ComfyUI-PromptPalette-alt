@@ -1,14 +1,14 @@
 [project]
-name = "promptchecklist"
-description = "This is a text editing extension for ComfyUI. It allows you to easily switch phrases for prompts using only the mouse."
+name = "ComfyUI-PromptPalette"
+description = "A custom node for ComfyUI that makes prompt editing easier by allowing phrase switching with just mouse operations."
 version = "1.0.0"
 license = {file = "LICENSE"}
 
 [project.urls]
-Repository = "https://github.com/kambara/ComfyUI-PromptCheckList"
+Repository = "https://github.com/kambara/ComfyUI-PromptPalette"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
-DisplayName = "ComfyUI-PromptCheckList"
+PublisherId = "kambara"
+DisplayName = "ComfyUI-PromptPalette"
 Icon = ""
