@@ -1,6 +1,6 @@
 [project]
 name = "ComfyUI-PromptPalette"
-description = "A custom node for ComfyUI that makes prompt editing easier by allowing phrase switching with just mouse operations."
+description = "A custom node that makes prompt editing easier by allowing phrase switching with just mouse operations."
 version = "1.0.0"
 license = {file = "LICENSE"}
 
