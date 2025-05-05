@@ -1,7 +1,7 @@
 import os
 
 
-class PromptCheckList:
+class PromptPalette:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -43,6 +43,6 @@ class PromptCheckList:
         return (result,)
 
 
-NODE_CLASS_MAPPINGS = {"PromptCheckList": PromptCheckList}
-NODE_DISPLAY_NAME_MAPPINGS = {"PromptCheckList": "Prompt Check List"}
+NODE_CLASS_MAPPINGS = {"PromptPalette": PromptPalette}
+NODE_DISPLAY_NAME_MAPPINGS = {"PromptPalette": "Prompt Palette"}
 WEB_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "web")

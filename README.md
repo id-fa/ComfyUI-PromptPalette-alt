@@ -1,4 +1,4 @@
-# ComfyUI-PromptCheckList
+# ComfyUI-PromptPalette
 
 ComfyUI用のテキスト編集拡張機能です。
 プロンプト用のフレーズの切り替えをマウスだけで簡単にできます。
@@ -16,7 +16,7 @@ ComfyUI用のテキスト編集拡張機能です。
 
 ## 使用方法
 
-1. `Prompt Check List`ノードをワークフローに追加
+1. `Prompt Palette`ノードをワークフローに追加
 2. テキスト編集：
    - Editボタンをクリックして編集モードに切り替え
    - 1行につき1フレーズを入力

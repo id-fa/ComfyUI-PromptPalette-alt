@@ -3,10 +3,10 @@ import { app } from "../../scripts/app.js";
 
 // 拡張機能を登録
 app.registerExtension({
-    name: "PromptCheckList",
+    name: "PromptPalette",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "PromptCheckList") {
+        if (nodeData.name === "PromptPalette") {
             const UI_CONFIG = {
                 lineHeight: 20,
                 leftPadding: 14,
