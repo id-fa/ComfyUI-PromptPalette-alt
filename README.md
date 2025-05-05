@@ -1,25 +1,25 @@
-# ComfyUI-PromptPalette
+# ComfyUI PromptPalette
 
-ComfyUI用のテキスト編集拡張機能です。
-プロンプト用のフレーズの切り替えをマウスだけで簡単にできます。
+This is a custom node for ComfyUI that makes prompt editing a little easier.
+You can easily switch phrases for prompts with just mouse operations.
 
-## 機能
+## Features
 
-- チェックボックスで使うフレーズを切り替え
-- フレーズをカンマ区切りしたテキストを出力
-- ソケットから入力されたテキストと結合
+- Toggle phrases by turning checkboxes on and off
+- Output phrases as comma-separated text
+- Combine with input text
 
-## インストール
+## Installation
 
-1. ComfyUIの `custom_nodes` ディレクトリにクローン
-2. ComfyUIを再起動
+1. Clone into the `custom_nodes` directory of ComfyUI
+2. Restart ComfyUI
 
-## 使用方法
+## Usage
 
-1. `Prompt Palette`ノードをワークフローに追加
-2. テキスト編集：
-   - Editボタンをクリックして編集モードに切り替え
-   - 1行につき1フレーズを入力
-   - Saveボタンをクリックして編集を完了
-3. 使用フレーズ切り替え：
-   - 表示モードでチェックボックスを切り替えることで使用するフレーズを切り替え
+1. Add the `Prompt Palette` node to your workflow
+2. Edit text:
+   - Click the Edit button to switch to edit mode
+   - Enter one phrase per line
+   - Click the Save button to complete editing
+3. Toggle phrases:
+   - Toggle checkboxes in display mode to select which phrases to use
