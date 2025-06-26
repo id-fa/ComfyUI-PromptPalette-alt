@@ -9,7 +9,7 @@ app.registerExtension({
                 minNodeHeight: 80,
                 topNodePadding: 40,
                 leftNodePadding: 14,
-                lineHeight: 26,
+                lineHeight: 24,
                 fontSize: 14,
                 checkboxSize: 16,
                 spaceBetweenCheckboxAndText: 6,
