@@ -175,11 +175,11 @@ function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
     
     // Draw checkbox
     ctx.fillStyle = "#AAAAAA";
-    ctx.strokeStyle = "#505050";
+    ctx.strokeStyle = !isCommented ? "#777777" : "#505050";
     ctx.lineWidth = 1;
     
     if (!isCommented) {
-        const padding = 2;
+        const padding = 3;
         ctx.fillRect(
             checkboxX + padding, 
             checkboxY + padding, 
