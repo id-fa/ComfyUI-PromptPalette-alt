@@ -6,12 +6,13 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "PromptPalette") {
             const UI_CONFIG = {
-                lineHeight: 20,
+                minNodeHeight: 80,
+                topPadding: 40,
                 leftPadding: 14,
-                topPadding: 54,
-                minHeight: 80,
-                checkboxSize: 10,
-                checkboxOffset: 6
+                lineHeight: 26,
+                fontSize: 14,
+                checkboxSize: 16,
+                spaceBetweenCheckboxAndText: 6,
             };
             this.extendNodeCreatedCallback(nodeType, UI_CONFIG, app);
             this.extendDrawForegroundCallback(nodeType, UI_CONFIG, app);
@@ -111,7 +112,7 @@ function renderCheckboxList(node, ctx, text, config, app) {
     const lines = text.split('\n');
     
     // Adjust node size to match text line count
-    const textHeight = Math.max(config.minHeight, config.topPadding + lines.length * config.lineHeight + 10);
+    const textHeight = Math.max(config.minNodeHeight, config.topPadding + lines.length * config.lineHeight + 10);
     
     if (node.size[1] < textHeight) {
         node.size[1] = textHeight;
@@ -155,7 +156,7 @@ function renderCheckboxItems(ctx, lines, config, node) {
 
 function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
     const checkboxX = config.leftPadding;
-    const checkboxY = y - config.checkboxSize;
+    const checkboxY = y;
     const checkboxW = config.checkboxSize;
     const checkboxH = config.checkboxSize;
     
@@ -213,7 +214,11 @@ function drawLineText(ctx, displayText, config, y, isCommented) {
     ctx.fillStyle = isCommented ? "#777777" : "#ffffff";
     
     // Draw text
-    ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.checkboxOffset, y);
+    // Calculate text baseline to align visual center with checkbox center
+    const checkboxCenter = y + config.checkboxSize / 2;
+    const textBaseline = checkboxCenter + config.fontSize * 0.35;
+    
+    ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.spaceBetweenCheckboxAndText, textBaseline);
 }
 
 function findClickedArea(pos) {
