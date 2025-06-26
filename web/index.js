@@ -7,19 +7,19 @@ app.registerExtension({
         if (nodeData.name === "PromptPalette") {
             const UI_CONFIG = {
                 minNodeHeight: 80,
-                topPadding: 40,
-                leftPadding: 14,
+                topNodePadding: 40,
+                leftNodePadding: 14,
                 lineHeight: 26,
                 fontSize: 14,
                 checkboxSize: 16,
                 spaceBetweenCheckboxAndText: 6,
             };
-            this.extendNodeCreatedCallback(nodeType, UI_CONFIG, app);
-            this.extendDrawForegroundCallback(nodeType, UI_CONFIG, app);
+            this.setupNodeCreatedCallback(nodeType, UI_CONFIG, app);
+            this.setupDrawForegroundCallback(nodeType, UI_CONFIG, app);
         }
     },
 
-    extendNodeCreatedCallback(nodeType, config, app) {
+    setupNodeCreatedCallback(nodeType, config, app) {
         const origOnNodeCreated = nodeType.prototype.onNodeCreated;
         
         nodeType.prototype.onNodeCreated = function() {
@@ -36,7 +36,7 @@ app.registerExtension({
         };
     },
 
-    extendDrawForegroundCallback(nodeType, config, app) {
+    setupDrawForegroundCallback(nodeType, config, app) {
         const origOnDrawForeground = nodeType.prototype.onDrawForeground;
         
         nodeType.prototype.onDrawForeground = function(ctx) {
@@ -46,7 +46,7 @@ app.registerExtension({
             // Draw text when not in edit mode
             const textWidget = findTextWidget(this);
             if (textWidget && !this.isEditMode) {
-                renderCheckboxList(this, ctx, textWidget.value, config, app);
+                drawCheckboxList(this, ctx, textWidget.value, config, app);
             }
         };
     }
@@ -103,7 +103,7 @@ function toggleCommentOnLine(textLines, lineIndex) {
     }
 }
 
-function renderCheckboxList(node, ctx, text, config, app) {
+function drawCheckboxList(node, ctx, text, config, app) {
     // Skip if node is collapsed
     if (node.flags && node.flags.collapsed) {
         return;
@@ -112,7 +112,7 @@ function renderCheckboxList(node, ctx, text, config, app) {
     const lines = text.split('\n');
     
     // Adjust node size to match text line count
-    const textHeight = Math.max(config.minNodeHeight, config.topPadding + lines.length * config.lineHeight + 10);
+    const textHeight = Math.max(config.minNodeHeight, config.topNodePadding + lines.length * config.lineHeight + 10);
     
     if (node.size[1] < textHeight) {
         node.size[1] = textHeight;
@@ -123,7 +123,7 @@ function renderCheckboxList(node, ctx, text, config, app) {
     ctx.font = "14px monospace";
     ctx.textAlign = "left";
     if (text.trim() !== "") {
-        renderCheckboxItems(ctx, lines, config, node);
+        drawCheckboxItems(ctx, lines, config, node);
     } else {
         // If text is empty
         ctx.fillStyle = "#aaaaaa";
@@ -132,7 +132,7 @@ function renderCheckboxList(node, ctx, text, config, app) {
     }
 }
 
-function renderCheckboxItems(ctx, lines, config, node) {
+function drawCheckboxItems(ctx, lines, config, node) {
     // Clear clickableAreas before redrawing
     if (node) {
         node.clickableAreas = [];
@@ -142,20 +142,20 @@ function renderCheckboxItems(ctx, lines, config, node) {
         // Skip empty lines
         if (isEmptyLine(line)) return;
         
-        const y = config.topPadding + index * config.lineHeight;
+        const y = config.topNodePadding + index * config.lineHeight;
         const isCommented = line.trim().startsWith("//");
         
         // Draw checkbox and add to clickable areas
         drawCheckbox(ctx, config, y, isCommented, node, index);
         
-        // Process and draw text
-        const displayText = processDisplayText(line, isCommented);
+        // Remove comments/commas and draw text
+        const displayText = cleanTextForDisplay(line, isCommented);
         drawLineText(ctx, displayText, config, y, isCommented);
     });
 }
 
 function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
-    const checkboxX = config.leftPadding;
+    const checkboxX = config.leftNodePadding;
     const checkboxY = y;
     const checkboxW = config.checkboxSize;
     const checkboxH = config.checkboxSize;
@@ -193,7 +193,7 @@ function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
     ctx.stroke();
 }
 
-function processDisplayText(line, isCommented) {
+function cleanTextForDisplay(line, isCommented) {
     let displayText = line;
     
     // Remove leading //
@@ -218,7 +218,7 @@ function drawLineText(ctx, displayText, config, y, isCommented) {
     const checkboxCenter = y + config.checkboxSize / 2;
     const textBaseline = checkboxCenter + config.fontSize * 0.35;
     
-    ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.spaceBetweenCheckboxAndText, textBaseline);
+    ctx.fillText(displayText, config.leftNodePadding + config.checkboxSize + config.spaceBetweenCheckboxAndText, textBaseline);
 }
 
 function findClickedArea(pos) {
