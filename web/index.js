@@ -45,7 +45,7 @@ app.registerExtension({
             // Draw text when not in edit mode
             const textWidget = findTextWidget(this);
             if (textWidget && !this.isEditMode) {
-                drawTextContent(this, ctx, textWidget, config, app);
+                renderCheckboxList(this, ctx, textWidget.value, config, app);
             }
         };
     }
@@ -75,24 +75,19 @@ function isEmptyLine(line) {
 }
 
 function setupClickHandler(node, textWidget, config, app) {
+    // Initialize clickableAreas
+    node.clickableAreas = [];
+    
+    // Add helper methods to node
+    node.findClickedArea = findClickedArea;
+    node.handleClickableAreaAction = handleClickableAreaAction;
+    
     node.onMouseDown = function(e, pos) {
         if (this.isEditMode) return;
         
-        // Calculate the clicked line number
-        const relativeY = pos[1] - (config.topPadding - config.lineHeight);
-        let clickedLineIndex = Math.floor(relativeY / config.lineHeight);
-        
-        const textLines = textWidget.value.split('\n');
-        if (clickedLineIndex < 0 || clickedLineIndex >= textLines.length) return;
-        if (isEmptyLine(textLines[clickedLineIndex])) return;
-        
-        // Check if the click is within the checkbox
-        const relativeX = pos[0];
-        const checkboxRight = config.leftPadding + config.checkboxSize;
-        if (relativeX >= config.leftPadding && relativeX <= checkboxRight) {
-            toggleCommentOnLine(textLines, clickedLineIndex);
-            textWidget.value = textLines.join('\n');
-            app.graph.setDirtyCanvas(true);
+        const clickedArea = this.findClickedArea(pos);
+        if (clickedArea) {
+            this.handleClickableAreaAction(clickedArea, textWidget, app);
         }
     };
 }
@@ -107,13 +102,12 @@ function toggleCommentOnLine(textLines, lineIndex) {
     }
 }
 
-function drawTextContent(node, ctx, textWidget, config, app) {
+function renderCheckboxList(node, ctx, text, config, app) {
     // Skip if node is collapsed
     if (node.flags && node.flags.collapsed) {
         return;
     }
 
-    const text = textWidget.value || "";
     const lines = text.split('\n');
     
     // Adjust node size to match text line count
@@ -128,7 +122,7 @@ function drawTextContent(node, ctx, textWidget, config, app) {
     ctx.font = "14px monospace";
     ctx.textAlign = "left";
     if (text.trim() !== "") {
-        drawTextLines(ctx, lines, config);
+        renderCheckboxItems(ctx, lines, config, node);
     } else {
         // If text is empty
         ctx.fillStyle = "#aaaaaa";
@@ -137,46 +131,112 @@ function drawTextContent(node, ctx, textWidget, config, app) {
     }
 }
 
-function drawTextLines(ctx, lines, config) {
+function renderCheckboxItems(ctx, lines, config, node) {
+    // Clear clickableAreas before redrawing
+    if (node) {
+        node.clickableAreas = [];
+    }
+    
     lines.forEach((line, index) => {
-        const y = config.topPadding + index * config.lineHeight;
-        const isCommented = line.trim().startsWith("//");
-        
         // Skip empty lines
         if (isEmptyLine(line)) return;
         
-        // Checkbox
-        ctx.fillStyle = "#AAAAAA";
-        ctx.strokeStyle = "#505050";
-        ctx.lineWidth = 1;
-        if (!isCommented) {
-            const padding = 2;
-            ctx.fillRect(
-                config.leftPadding + padding, 
-                y - config.checkboxSize + padding, 
-                config.checkboxSize - padding * 2, 
-                config.checkboxSize - padding * 2
-            );
-        }
-        ctx.beginPath();
-        ctx.rect(config.leftPadding, y - config.checkboxSize, config.checkboxSize, config.checkboxSize);
-        ctx.stroke();
-
-        // Remove leading // and trailing ,
-        let displayText = line;
-        if (isCommented) {
-            displayText = line.trim().replace(/^\s*\/\/\s*/, '');
-        }
-        if (displayText.trim().endsWith(',')) {
-            displayText = displayText.substring(0, displayText.lastIndexOf(','));
-        }
+        const y = config.topPadding + index * config.lineHeight;
+        const isCommented = line.trim().startsWith("//");
         
-        // Draw text
-        if (isCommented) {
-            ctx.fillStyle = "#777777";
-        } else {
-            ctx.fillStyle = "#ffffff";
-        }
-        ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.checkboxOffset, y);
+        // Draw checkbox and add to clickable areas
+        drawCheckbox(ctx, config, y, isCommented, node, index);
+        
+        // Process and draw text
+        const displayText = processDisplayText(line, isCommented);
+        drawLineText(ctx, displayText, config, y, isCommented);
     });
+}
+
+function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
+    const checkboxX = config.leftPadding;
+    const checkboxY = y - config.checkboxSize;
+    const checkboxW = config.checkboxSize;
+    const checkboxH = config.checkboxSize;
+    
+    // Add to clickableAreas
+    if (node) {
+        node.clickableAreas.push({
+            x: checkboxX,
+            y: checkboxY,
+            w: checkboxW,
+            h: checkboxH,
+            type: 'checkbox',
+            lineIndex: lineIndex,
+            action: 'toggle'
+        });
+    }
+    
+    // Draw checkbox
+    ctx.fillStyle = "#AAAAAA";
+    ctx.strokeStyle = "#505050";
+    ctx.lineWidth = 1;
+    
+    if (!isCommented) {
+        const padding = 2;
+        ctx.fillRect(
+            checkboxX + padding, 
+            checkboxY + padding, 
+            checkboxW - padding * 2, 
+            checkboxH - padding * 2
+        );
+    }
+    
+    ctx.beginPath();
+    ctx.rect(checkboxX, checkboxY, checkboxW, checkboxH);
+    ctx.stroke();
+}
+
+function processDisplayText(line, isCommented) {
+    let displayText = line;
+    
+    // Remove leading //
+    if (isCommented) {
+        displayText = line.trim().replace(/^\s*\/\/\s*/, '');
+    }
+    
+    // Remove trailing comma
+    if (displayText.trim().endsWith(',')) {
+        displayText = displayText.substring(0, displayText.lastIndexOf(','));
+    }
+    
+    return displayText;
+}
+
+function drawLineText(ctx, displayText, config, y, isCommented) {
+    // Set text color based on comment status
+    ctx.fillStyle = isCommented ? "#777777" : "#ffffff";
+    
+    // Draw text
+    ctx.fillText(displayText, config.leftPadding + config.checkboxSize + config.checkboxOffset, y);
+}
+
+function findClickedArea(pos) {
+    const [x, y] = pos;
+    for (const area of this.clickableAreas || []) {
+        if (x >= area.x && x <= area.x + area.w && 
+            y >= area.y && y <= area.y + area.h) {
+            return area;
+        }
+    }
+    return null;
+}
+
+function handleClickableAreaAction(area, textWidget, app) {
+    switch (area.action) {
+        case 'toggle':
+            const textLines = textWidget.value.split('\n');
+            if (area.lineIndex >= 0 && area.lineIndex < textLines.length) {
+                toggleCommentOnLine(textLines, area.lineIndex);
+                textWidget.value = textLines.join('\n');
+                app.graph.setDirtyCanvas(true);
+            }
+            break;
+        // Future actions can be added here
+    }
 }
