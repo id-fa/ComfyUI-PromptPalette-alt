@@ -160,7 +160,7 @@ function drawCheckboxItems(ctx, lines, node) {
         
         // Remove comments/commas and draw text
         const phraseText = getPhraseText(line, isCommented);
-        drawLineText(ctx, phraseText, y, isCommented);
+        drawPhraseText(ctx, phraseText, y, isCommented, line);
         
         // Draw weight display and buttons
         drawWeightControls(ctx, y, line, isCommented, node, index);
@@ -209,10 +209,13 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
 function getPhraseText(line, isCommented) {
     let phraseText = line;
     
-    // Remove leading //
+    // Remove leading // for both commented and non-commented lines
     if (isCommented) {
         phraseText = line.trim().replace(/^\s*\/\/\s*/, '');
     }
+    
+    // Remove weight notation from all lines
+    phraseText = phraseText.replace(/\(([^:]+):(\d+\.?\d*)\)/g, '$1');
     
     // Remove trailing comma
     if (phraseText.trim().endsWith(',')) {
@@ -222,11 +225,23 @@ function getPhraseText(line, isCommented) {
     return phraseText;
 }
 
-function drawLineText(ctx, phraseText, y, isCommented) {
+function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
     // Set text color based on comment status
     ctx.fillStyle = isCommented ? "#777777" : "#ffffff";
+    ctx.textAlign = "left";
     
-    // Draw text
+    // Check if the original line has weight notation (not 1.0)
+    const textToCheck = isCommented ? 
+        (originalLine.match(/^(\s*\/\/\s*)(.*)/)?.[2] || '') : 
+        originalLine;
+    const weight = parseWeight(textToCheck);
+    const isBold = weight !== 1.0;
+    
+    // Set font with bold if weight is not 1.0
+    ctx.font = isBold ? 
+        `bold ${CONFIG.fontSize}px monospace` : 
+        `${CONFIG.fontSize}px monospace`;
+    
     // Calculate text baseline to align visual center with checkbox center
     const checkboxCenter = y + CONFIG.checkboxSize / 2;
     const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
@@ -269,6 +284,7 @@ function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
         const weightLabelX = currentX - CONFIG.weightLabelWidth;
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "right";
+        ctx.font = "12px monospace";
         const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
         ctx.fillText(weightText, currentX - 2, textBaseline);
         ctx.textAlign = "left"; // Reset alignment
@@ -293,12 +309,12 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
     }
     
     // Draw button border
-    ctx.strokeStyle = "#666666";
+    ctx.strokeStyle = "#777777";
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, buttonSize, buttonSize);
     
     // Draw symbol with lines
-    ctx.strokeStyle = "#ffffff";
+    ctx.strokeStyle = "#aaaaaa";
     ctx.lineWidth = 1;
     const centerX = x + buttonSize / 2;
     const centerY = y + buttonSize / 2;
