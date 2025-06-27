@@ -16,7 +16,9 @@ const CONFIG = {
     inactiveTextColor: "#777777",
     checkboxBorderColor: "#505050",
     checkboxFillColor: "#888888",
-    checkmarkColor: "#333333",
+    checkboxSymbolColor: "#333333",
+    weightButtonFillColor: "#222222",
+    weightButtonSymbolColor: "#777777",
 };
 
 app.registerExtension({
@@ -141,7 +143,7 @@ function drawCheckboxList(node, ctx, text, app) {
         drawCheckboxItems(ctx, lines, node);
     } else {
         // If text is empty
-        ctx.fillStyle = "#aaaaaa";
+        ctx.fillStyle = CONFIG.inactiveTextColor;
         ctx.textAlign = "center";
         ctx.fillText("No Text", node.size[0]/2, node.size[1]/2);
     }
@@ -207,7 +209,7 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
         ctx.fill();
 
         // Draw checkmark
-        ctx.strokeStyle = CONFIG.checkmarkColor;
+        ctx.strokeStyle = CONFIG.checkboxSymbolColor;
         ctx.lineWidth = 2;
         const centerX = checkboxX + checkboxW / 2;
         const centerY = checkboxY + checkboxH / 2;
@@ -324,13 +326,13 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
     }
     
     // Draw button background
-    ctx.fillStyle = "#222222";
+    ctx.fillStyle = CONFIG.weightButtonFillColor;
     ctx.beginPath();
     ctx.roundRect(x, y, buttonSize, buttonSize, 4);
     ctx.fill();
     
     // Draw symbol with lines
-    ctx.strokeStyle = "#777777";
+    ctx.strokeStyle = CONFIG.weightButtonSymbolColor;
     ctx.lineWidth = 2;
     const centerX = x + buttonSize / 2;
     const centerY = y + buttonSize / 2;
