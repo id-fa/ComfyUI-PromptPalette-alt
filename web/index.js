@@ -1,5 +1,46 @@
 import { app } from "../../scripts/app.js";
 
+function expandHexColor(color) {
+    if (!color || !color.startsWith('#')) return color;
+    if (color.length === 4) {
+        return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+    }
+    return color;
+}
+
+function getComfyUIThemeColors() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        fgColor: expandHexColor(style.getPropertyValue('--fg-color').trim()) || "#ffffff",
+        bgColor: expandHexColor(style.getPropertyValue('--bg-color').trim()) || "#202020",
+        comfyMenuBg: expandHexColor(style.getPropertyValue('--comfy-menu-bg').trim()) || "#353535",
+        comfyInputBg: expandHexColor(style.getPropertyValue('--comfy-input-bg').trim()) || "#222222",
+        inputText: expandHexColor(style.getPropertyValue('--input-text').trim()) || "#dddddd",
+        descripText: expandHexColor(style.getPropertyValue('--descrip-text').trim()) || "#999999",
+        errorText: expandHexColor(style.getPropertyValue('--error-text').trim()) || "#ff4444",
+        borderColor: expandHexColor(style.getPropertyValue('--border-color').trim()) || "#4e4e4e",
+    };
+}
+
+let colorCache = null;
+
+function getColors() {
+    if (colorCache) {
+        return colorCache;
+    }
+    const themeColors = getComfyUIThemeColors();
+    colorCache = {
+        defaultTextColor: themeColors.inputText,
+        inactiveTextColor: themeColors.inputText + "66",
+        checkboxBorderColor: themeColors.inputText + "80",
+        checkboxFillColor: themeColors.inputText + "BB",
+        checkboxSymbolColor: themeColors.comfyInputBg,
+        weightButtonFillColor: themeColors.comfyInputBg,
+        weightButtonSymbolColor: themeColors.inputText + "99",
+    };
+    return colorCache;
+}
+
 const CONFIG = {
     minNodeHeight: 80,
     topNodePadding: 40,
@@ -12,13 +53,6 @@ const CONFIG = {
     weightLabelWidth: 24,
     minWeight: 0.1,
     maxWeight: 2.0,
-    defaultTextColor: "#cccccc",
-    inactiveTextColor: "#777777",
-    checkboxBorderColor: "#505050",
-    checkboxFillColor: "#888888",
-    checkboxSymbolColor: "#333333",
-    weightButtonFillColor: "#222222",
-    weightButtonSymbolColor: "#777777",
 };
 
 app.registerExtension({
@@ -143,7 +177,7 @@ function drawCheckboxList(node, ctx, text, app) {
         drawCheckboxItems(ctx, lines, node);
     } else {
         // If text is empty
-        ctx.fillStyle = CONFIG.inactiveTextColor;
+        ctx.fillStyle = getColors().inactiveTextColor;
         ctx.textAlign = "center";
         ctx.fillText("No Text", node.size[0]/2, node.size[1]/2);
     }
@@ -196,20 +230,20 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
     // Draw checkbox
     if (isCommented) {
         // Draw checkbox border
-        ctx.strokeStyle = CONFIG.checkboxBorderColor;
+        ctx.strokeStyle = getColors().checkboxBorderColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
         ctx.stroke();
     } else {
         // Fill checkbox
-        ctx.fillStyle = CONFIG.checkboxFillColor;
+        ctx.fillStyle = getColors().checkboxFillColor;
         ctx.beginPath();
         ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
         ctx.fill();
 
         // Draw checkmark
-        ctx.strokeStyle = CONFIG.checkboxSymbolColor;
+        ctx.strokeStyle = getColors().checkboxSymbolColor;
         ctx.lineWidth = 2;
         const centerX = checkboxX + checkboxW / 2;
         const centerY = checkboxY + checkboxH / 2;
@@ -244,7 +278,8 @@ function getPhraseText(line, isCommented) {
 
 function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
     // Set text color based on comment status
-    ctx.fillStyle = isCommented ? CONFIG.inactiveTextColor : CONFIG.defaultTextColor;
+    const colors = getColors();
+    ctx.fillStyle = isCommented ? colors.inactiveTextColor : colors.defaultTextColor;
     ctx.textAlign = "left";
     
     // Check if the original line has weight notation (not 1.0)
@@ -299,7 +334,8 @@ function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
     // Draw weight label
     if (weightText) {
         const weightLabelX = currentX - CONFIG.weightLabelWidth;
-        ctx.fillStyle = isCommented ? CONFIG.inactiveTextColor : CONFIG.defaultTextColor;
+        const textColors = getColors();
+    ctx.fillStyle = isCommented ? textColors.inactiveTextColor : textColors.defaultTextColor;
         ctx.textAlign = "right";
         ctx.font = "12px monospace";
         const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
@@ -326,13 +362,13 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
     }
     
     // Draw button background
-    ctx.fillStyle = CONFIG.weightButtonFillColor;
+    ctx.fillStyle = getColors().weightButtonFillColor;
     ctx.beginPath();
     ctx.roundRect(x, y, buttonSize, buttonSize, 4);
     ctx.fill();
     
     // Draw symbol with lines
-    ctx.strokeStyle = CONFIG.weightButtonSymbolColor;
+    ctx.strokeStyle = getColors().weightButtonSymbolColor;
     ctx.lineWidth = 2;
     const centerX = x + buttonSize / 2;
     const centerY = y + buttonSize / 2;
