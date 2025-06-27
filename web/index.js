@@ -12,6 +12,8 @@ const CONFIG = {
     weightLabelWidth: 24,
     minWeight: 0.1,
     maxWeight: 2.0,
+    defaultTextColor: "#cccccc",
+    inactiveTextColor: "#777777",
 };
 
 app.registerExtension({
@@ -227,7 +229,7 @@ function getPhraseText(line, isCommented) {
 
 function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
     // Set text color based on comment status
-    ctx.fillStyle = isCommented ? "#777777" : "#ffffff";
+    ctx.fillStyle = isCommented ? CONFIG.inactiveTextColor : CONFIG.defaultTextColor;
     ctx.textAlign = "left";
     
     // Check if the original line has weight notation (not 1.0)
@@ -279,10 +281,10 @@ function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
     drawWeightButton(ctx, minusButtonX, minusButtonY, '-', node, lineIndex, 'weight_minus');
     currentX = minusButtonX - 4;
     
-    // Draw weight display
+    // Draw weight label
     if (weightText) {
         const weightLabelX = currentX - CONFIG.weightLabelWidth;
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = isCommented ? CONFIG.inactiveTextColor : CONFIG.defaultTextColor;
         ctx.textAlign = "right";
         ctx.font = "12px monospace";
         const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
@@ -308,14 +310,13 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
         });
     }
     
-    // Draw button border
-    ctx.strokeStyle = "#777777";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, buttonSize, buttonSize);
+    // Draw button background
+    ctx.fillStyle = "#222222";
+    ctx.fillRect(x, y, buttonSize, buttonSize);
     
     // Draw symbol with lines
-    ctx.strokeStyle = "#aaaaaa";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#777777";
+    ctx.lineWidth = 2;
     const centerX = x + buttonSize / 2;
     const centerY = y + buttonSize / 2;
     const symbolSize = 6;
