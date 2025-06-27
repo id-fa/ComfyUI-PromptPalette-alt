@@ -14,6 +14,9 @@ const CONFIG = {
     maxWeight: 2.0,
     defaultTextColor: "#cccccc",
     inactiveTextColor: "#777777",
+    checkboxBorderColor: "#505050",
+    checkboxFillColor: "#888888",
+    checkmarkColor: "#333333",
 };
 
 app.registerExtension({
@@ -189,26 +192,33 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
     }
     
     // Draw checkbox
-    ctx.fillStyle = "#AAAAAA";
-    ctx.strokeStyle = !isCommented ? "#777777" : "#505050";
-    ctx.lineWidth = 1;
-    
-    if (!isCommented) {
-        const padding = 3;
+    if (isCommented) {
+        // Draw checkbox border
+        ctx.strokeStyle = CONFIG.checkboxBorderColor;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(
-            checkboxX + padding, 
-            checkboxY + padding, 
-            checkboxW - padding * 2, 
-            checkboxH - padding * 2,
-            2
-        );
+        ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
+        ctx.stroke();
+    } else {
+        // Fill checkbox
+        ctx.fillStyle = CONFIG.checkboxFillColor;
+        ctx.beginPath();
+        ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
         ctx.fill();
+
+        // Draw checkmark
+        ctx.strokeStyle = CONFIG.checkmarkColor;
+        ctx.lineWidth = 2;
+        const centerX = checkboxX + checkboxW / 2;
+        const centerY = checkboxY + checkboxH / 2;
+        const checkSize = checkboxW * 0.4;
+        ctx.beginPath();
+        // Start from left, go to bottom center, then to top right
+        ctx.moveTo(centerX - checkSize * 0.7, centerY + checkSize * 0.0);
+        ctx.lineTo(centerX - checkSize * 0.3, centerY + checkSize * 0.5);
+        ctx.lineTo(centerX + checkSize * 0.7, centerY - checkSize * 0.5);
+        ctx.stroke();
     }
-    
-    ctx.beginPath();
-    ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
-    ctx.stroke();
 }
 
 function getPhraseText(line, isCommented) {
