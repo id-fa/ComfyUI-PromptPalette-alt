@@ -28,5 +28,5 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
    - **Toggle checkboxes** in display mode to enable/disable phrases
    - **Adjust phrase weights** using +/- buttons
 4. **Output**:
-   - Selected phrases are combined and output as formatted text
+   - Selected phrases are output as comma-separated prompt text
      ![Output example](examples/example-03.png)
