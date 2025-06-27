@@ -312,7 +312,9 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
     
     // Draw button background
     ctx.fillStyle = "#222222";
-    ctx.fillRect(x, y, buttonSize, buttonSize);
+    ctx.beginPath();
+    ctx.roundRect(x, y, buttonSize, buttonSize, 4);
+    ctx.fill();
     
     // Draw symbol with lines
     ctx.strokeStyle = "#777777";
