@@ -67,8 +67,13 @@ function addEditButton(node, textWidget, app) {
         node.isEditMode = !node.isEditMode;
         textWidget.hidden = !node.isEditMode;
         textButton.name = node.isEditMode ? "Save" : "Edit";
-        app.graph.setDirtyCanvas(true); // 再描画
+        app.graph.setDirtyCanvas(true); // Redraw canvas
     });
+    
+    // Add spacing below Edit button
+    const spacer = node.addWidget("text", "", "");
+    spacer.hidden = true;
+    spacer.computeSize = () => [0, 6];
 }
 
 function isEmptyLine(line) {
