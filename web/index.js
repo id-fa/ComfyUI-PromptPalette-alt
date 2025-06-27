@@ -195,16 +195,19 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
     
     if (!isCommented) {
         const padding = 3;
-        ctx.fillRect(
+        ctx.beginPath();
+        ctx.roundRect(
             checkboxX + padding, 
             checkboxY + padding, 
             checkboxW - padding * 2, 
-            checkboxH - padding * 2
+            checkboxH - padding * 2,
+            2
         );
+        ctx.fill();
     }
     
     ctx.beginPath();
-    ctx.rect(checkboxX, checkboxY, checkboxW, checkboxH);
+    ctx.roundRect(checkboxX, checkboxY, checkboxW, checkboxH, 4);
     ctx.stroke();
 }
 
