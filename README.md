@@ -6,9 +6,10 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 
 ## Features
 
-- Toggle phrases by turning checkboxes on and off
-- Output phrases as comma-separated text
-- Combine with input text
+- **Toggle phrases** with checkboxes
+- **Adjust phrase weights** using +/- buttons
+- **Prefix input** to combine with generated text
+- **Output** as properly formatted, comma-separated text
 
 ## Installation
 
@@ -17,11 +18,12 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 
 ## Usage
 
-1. Add the `Prompt Palette` node to your workflow
-2. Edit text:
-   - Click the Edit button to switch to edit mode
+1. **Add the node**: Add the `Prompt Palette` node to your workflow
+2. **Edit text**:
+   - Click the **Edit** button to switch to edit mode
    - Enter one phrase per line
      ![Edit mode example](examples/example-02-editing.png)
-   - Click the Save button to complete editing
-3. Toggle phrases:
-   - Toggle checkboxes in display mode to select which phrases to use
+   - Click the **Save** button to complete editing
+3. **Control phrases**:
+   - **Toggle checkboxes** in display mode to enable/disable phrases
+   - **Adjust phrase weights** using +/- buttons
