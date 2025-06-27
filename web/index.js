@@ -1,46 +1,5 @@
 import { app } from "../../scripts/app.js";
 
-function expandHexColor(color) {
-    if (!color || !color.startsWith('#')) return color;
-    if (color.length === 4) {
-        return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
-    }
-    return color;
-}
-
-function getComfyUIThemeColors() {
-    const style = getComputedStyle(document.documentElement);
-    return {
-        fgColor: expandHexColor(style.getPropertyValue('--fg-color').trim()) || "#ffffff",
-        bgColor: expandHexColor(style.getPropertyValue('--bg-color').trim()) || "#202020",
-        comfyMenuBg: expandHexColor(style.getPropertyValue('--comfy-menu-bg').trim()) || "#353535",
-        comfyInputBg: expandHexColor(style.getPropertyValue('--comfy-input-bg').trim()) || "#222222",
-        inputText: expandHexColor(style.getPropertyValue('--input-text').trim()) || "#dddddd",
-        descripText: expandHexColor(style.getPropertyValue('--descrip-text').trim()) || "#999999",
-        errorText: expandHexColor(style.getPropertyValue('--error-text').trim()) || "#ff4444",
-        borderColor: expandHexColor(style.getPropertyValue('--border-color').trim()) || "#4e4e4e",
-    };
-}
-
-let colorCache = null;
-
-function getColors() {
-    if (colorCache) {
-        return colorCache;
-    }
-    const themeColors = getComfyUIThemeColors();
-    colorCache = {
-        defaultTextColor: themeColors.inputText,
-        inactiveTextColor: themeColors.inputText + "66",
-        checkboxBorderColor: themeColors.inputText + "80",
-        checkboxFillColor: themeColors.inputText + "BB",
-        checkboxSymbolColor: themeColors.comfyInputBg,
-        weightButtonFillColor: themeColors.comfyInputBg,
-        weightButtonSymbolColor: themeColors.inputText + "99",
-    };
-    return colorCache;
-}
-
 const CONFIG = {
     minNodeHeight: 80,
     topNodePadding: 40,
@@ -54,6 +13,10 @@ const CONFIG = {
     minWeight: 0.1,
     maxWeight: 2.0,
 };
+
+// ========================================
+// Extension Registration
+// ========================================
 
 app.registerExtension({
     name: "PromptPalette",
@@ -98,6 +61,10 @@ app.registerExtension({
     }
 });
 
+// ========================================
+// UI Control
+// ========================================
+
 function findTextWidget(node) {
     if (!node.widgets) return null;
     for (const w of node.widgets) {
@@ -122,10 +89,6 @@ function addEditButton(node, textWidget, app) {
     spacer.computeSize = () => [0, 6];
 }
 
-function isEmptyLine(line) {
-    return line.trim() === "";
-}
-
 function setupClickHandler(node, textWidget, app) {
     // Initialize clickableAreas
     node.clickableAreas = [];
@@ -144,6 +107,36 @@ function setupClickHandler(node, textWidget, app) {
     };
 }
 
+function findClickedArea(pos) {
+    const [x, y] = pos;
+    for (const area of this.clickableAreas || []) {
+        if (x >= area.x && x <= area.x + area.w && 
+            y >= area.y && y <= area.y + area.h) {
+            return area;
+        }
+    }
+    return null;
+}
+
+function handleClickableAreaAction(area, textWidget, app) {
+    switch (area.action) {
+        case 'toggle':
+            const textLines = textWidget.value.split('\n');
+            if (area.lineIndex >= 0 && area.lineIndex < textLines.length) {
+                toggleCommentOnLine(textLines, area.lineIndex);
+                textWidget.value = textLines.join('\n');
+                app.graph.setDirtyCanvas(true);
+            }
+            break;
+        case 'weight_plus':
+            adjustWeightInText(textWidget, area.lineIndex, 0.1, app);
+            break;
+        case 'weight_minus':
+            adjustWeightInText(textWidget, area.lineIndex, -0.1, app);
+            break;
+    }
+}
+
 function toggleCommentOnLine(textLines, lineIndex) {
     const line = textLines[lineIndex];
     
@@ -153,6 +146,41 @@ function toggleCommentOnLine(textLines, lineIndex) {
         textLines[lineIndex] = "// " + line;
     }
 }
+
+function adjustWeightInText(textWidget, lineIndex, delta, app) {
+    const textLines = textWidget.value.split('\n');
+    if (lineIndex >= 0 && lineIndex < textLines.length) {
+        const line = textLines[lineIndex];
+        
+        // Check if line starts with comment
+        if (line.trim().startsWith('//')) {
+            const commentMatch = line.match(/^(\s*\/\/\s*)(.*)/);
+            if (commentMatch && commentMatch[2].trim()) {
+                const adjustedText = adjustWeight(commentMatch[2], delta);
+                textLines[lineIndex] = commentMatch[1] + adjustedText;
+            }
+        } else if (line.includes('//')) {
+            // Handle lines with inline comments like "abc // def"
+            const commentIndex = line.indexOf('//');
+            const beforeComment = line.substring(0, commentIndex).trim();
+            const comment = line.substring(commentIndex);
+            
+            if (beforeComment) {
+                const adjustedText = adjustWeight(beforeComment, delta);
+                textLines[lineIndex] = adjustedText + ' ' + comment;
+            }
+        } else {
+            // Regular line without comments
+            textLines[lineIndex] = adjustWeight(line, delta);
+        }
+        textWidget.value = textLines.join('\n');
+        app.graph.setDirtyCanvas(true);
+    }
+}
+
+// ========================================
+// Drawing
+// ========================================
 
 function drawCheckboxList(node, ctx, text, app) {
     // Skip if node is collapsed
@@ -208,6 +236,29 @@ function drawCheckboxItems(ctx, lines, node) {
     });
 }
 
+function isEmptyLine(line) {
+    return line.trim() === "";
+}
+
+function getPhraseText(line, isCommented) {
+    let phraseText = line;
+    
+    // Remove leading // for both commented and non-commented lines
+    if (isCommented) {
+        phraseText = line.trim().replace(/^\s*\/\/\s*/, '');
+    }
+    
+    // Remove weight notation from all lines
+    phraseText = phraseText.replace(/\(([^:]+):(\d+\.?\d*)\)/g, '$1');
+    
+    // Remove trailing comma
+    if (phraseText.trim().endsWith(',')) {
+        phraseText = phraseText.substring(0, phraseText.lastIndexOf(','));
+    }
+    
+    return phraseText;
+}
+
 function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
     const checkboxX = CONFIG.leftNodePadding;
     const checkboxY = y;
@@ -255,25 +306,6 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
         ctx.lineTo(centerX + checkSize * 0.7, centerY - checkSize * 0.5);
         ctx.stroke();
     }
-}
-
-function getPhraseText(line, isCommented) {
-    let phraseText = line;
-    
-    // Remove leading // for both commented and non-commented lines
-    if (isCommented) {
-        phraseText = line.trim().replace(/^\s*\/\/\s*/, '');
-    }
-    
-    // Remove weight notation from all lines
-    phraseText = phraseText.replace(/\(([^:]+):(\d+\.?\d*)\)/g, '$1');
-    
-    // Remove trailing comma
-    if (phraseText.trim().endsWith(',')) {
-        phraseText = phraseText.substring(0, phraseText.lastIndexOf(','));
-    }
-    
-    return phraseText;
 }
 
 function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
@@ -390,15 +422,13 @@ function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
     ctx.stroke();
 }
 
-function findClickedArea(pos) {
-    const [x, y] = pos;
-    for (const area of this.clickableAreas || []) {
-        if (x >= area.x && x <= area.x + area.w && 
-            y >= area.y && y <= area.y + area.h) {
-            return area;
-        }
-    }
-    return null;
+// ========================================
+// Weight
+// ========================================
+
+function getWeightText(text) {
+    const weight = parseWeight(text);
+    return weight === 1.0 ? '' : weight.toFixed(1);
 }
 
 function parseWeight(text) {
@@ -418,11 +448,6 @@ function setWeight(text, weight) {
         return textWithoutComma;
     }
     return `(${textWithoutComma}:${weight.toFixed(1)})`;
-}
-
-function getWeightText(text) {
-    const weight = parseWeight(text);
-    return weight === 1.0 ? '' : weight.toFixed(1);
 }
 
 function adjustWeight(text, delta) {
@@ -454,52 +479,47 @@ function adjustWeight(text, delta) {
     return setWeight(text, newWeight);
 }
 
-function handleClickableAreaAction(area, textWidget, app) {
-    switch (area.action) {
-        case 'toggle':
-            const textLines = textWidget.value.split('\n');
-            if (area.lineIndex >= 0 && area.lineIndex < textLines.length) {
-                toggleCommentOnLine(textLines, area.lineIndex);
-                textWidget.value = textLines.join('\n');
-                app.graph.setDirtyCanvas(true);
-            }
-            break;
-        case 'weight_plus':
-            adjustWeightInText(textWidget, area.lineIndex, 0.1, app);
-            break;
-        case 'weight_minus':
-            adjustWeightInText(textWidget, area.lineIndex, -0.1, app);
-            break;
+// ========================================
+// Color
+// ========================================
+
+let colorCache = null;
+
+function getColors() {
+    if (colorCache) {
+        return colorCache;
     }
+    const themeColors = getComfyUIThemeColors();
+    colorCache = {
+        defaultTextColor: themeColors.inputText,
+        inactiveTextColor: themeColors.inputText + "66",
+        checkboxBorderColor: themeColors.inputText + "80",
+        checkboxFillColor: themeColors.inputText + "BB",
+        checkboxSymbolColor: themeColors.comfyInputBg,
+        weightButtonFillColor: themeColors.comfyInputBg,
+        weightButtonSymbolColor: themeColors.inputText + "99",
+    };
+    return colorCache;
 }
 
-function adjustWeightInText(textWidget, lineIndex, delta, app) {
-    const textLines = textWidget.value.split('\n');
-    if (lineIndex >= 0 && lineIndex < textLines.length) {
-        const line = textLines[lineIndex];
-        
-        // Check if line starts with comment
-        if (line.trim().startsWith('//')) {
-            const commentMatch = line.match(/^(\s*\/\/\s*)(.*)/);
-            if (commentMatch && commentMatch[2].trim()) {
-                const adjustedText = adjustWeight(commentMatch[2], delta);
-                textLines[lineIndex] = commentMatch[1] + adjustedText;
-            }
-        } else if (line.includes('//')) {
-            // Handle lines with inline comments like "abc // def"
-            const commentIndex = line.indexOf('//');
-            const beforeComment = line.substring(0, commentIndex).trim();
-            const comment = line.substring(commentIndex);
-            
-            if (beforeComment) {
-                const adjustedText = adjustWeight(beforeComment, delta);
-                textLines[lineIndex] = adjustedText + ' ' + comment;
-            }
-        } else {
-            // Regular line without comments
-            textLines[lineIndex] = adjustWeight(line, delta);
-        }
-        textWidget.value = textLines.join('\n');
-        app.graph.setDirtyCanvas(true);
+function getComfyUIThemeColors() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        fgColor: expandHexColor(style.getPropertyValue('--fg-color').trim()) || "#ffffff",
+        bgColor: expandHexColor(style.getPropertyValue('--bg-color').trim()) || "#202020",
+        comfyMenuBg: expandHexColor(style.getPropertyValue('--comfy-menu-bg').trim()) || "#353535",
+        comfyInputBg: expandHexColor(style.getPropertyValue('--comfy-input-bg').trim()) || "#222222",
+        inputText: expandHexColor(style.getPropertyValue('--input-text').trim()) || "#dddddd",
+        descripText: expandHexColor(style.getPropertyValue('--descrip-text').trim()) || "#999999",
+        errorText: expandHexColor(style.getPropertyValue('--error-text').trim()) || "#ff4444",
+        borderColor: expandHexColor(style.getPropertyValue('--border-color').trim()) || "#4e4e4e",
+    };
+}
+
+function expandHexColor(color) {
+    if (!color || !color.startsWith('#')) return color;
+    if (color.length === 4) {
+        return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
     }
+    return color;
 }
