@@ -3,7 +3,7 @@ import { app } from "../../scripts/app.js";
 const CONFIG = {
     minNodeHeight: 80,
     topNodePadding: 40,
-    leftNodePadding: 14,
+    sideNodePadding: 14,
     lineHeight: 24,
     fontSize: 14,
     checkboxSize: 16,
@@ -260,7 +260,7 @@ function getPhraseText(line, isCommented) {
 }
 
 function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
-    const checkboxX = CONFIG.leftNodePadding;
+    const checkboxX = CONFIG.sideNodePadding;
     const checkboxY = y;
     const checkboxW = CONFIG.checkboxSize;
     const checkboxH = CONFIG.checkboxSize;
@@ -330,12 +330,11 @@ function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
     const checkboxCenter = y + CONFIG.checkboxSize / 2;
     const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
     
-    ctx.fillText(phraseText, CONFIG.leftNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText, textBaseline);
+    ctx.fillText(phraseText, CONFIG.sideNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText, textBaseline);
 }
 
 function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
     const nodeWidth = node.size[0];
-    const rightPadding = 10;
     
     // Get the text to check for weight
     const textToCheck = isCommented ? 
@@ -349,7 +348,7 @@ function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
     const checkboxCenter = y + CONFIG.checkboxSize / 2;
     
     // Calculate positions from right to left
-    let currentX = nodeWidth - rightPadding;
+    let currentX = nodeWidth - CONFIG.sideNodePadding;
     
     // Draw plus button
     const plusButtonX = currentX - CONFIG.weightButtonSize;
