@@ -1,21 +1,26 @@
 import { app } from "../../scripts/app.js";
 
+const CONFIG = {
+    minNodeHeight: 80,
+    topNodePadding: 40,
+    leftNodePadding: 14,
+    lineHeight: 24,
+    fontSize: 14,
+    checkboxSize: 16,
+    spaceBetweenCheckboxAndText: 6,
+    weightButtonSize: 16,
+    weightLabelWidth: 24,
+    minWeight: 0.1,
+    maxWeight: 2.0,
+};
+
 app.registerExtension({
     name: "PromptPalette",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "PromptPalette") {
-            const UI_CONFIG = {
-                minNodeHeight: 80,
-                topNodePadding: 40,
-                leftNodePadding: 14,
-                lineHeight: 24,
-                fontSize: 14,
-                checkboxSize: 16,
-                spaceBetweenCheckboxAndText: 6,
-            };
-            this.setupNodeCreatedCallback(nodeType, UI_CONFIG, app);
-            this.setupDrawForegroundCallback(nodeType, UI_CONFIG, app);
+            this.setupNodeCreatedCallback(nodeType, CONFIG, app);
+            this.setupDrawForegroundCallback(nodeType, CONFIG, app);
         }
     },
 
@@ -31,7 +36,7 @@ app.registerExtension({
             if (textWidget) {
                 textWidget.hidden = true;
                 addEditButton(this, textWidget, app);
-                setupClickHandler(this, textWidget, config, app);
+                setupClickHandler(this, textWidget, app);
             }
         };
     },
@@ -46,7 +51,7 @@ app.registerExtension({
             // Draw text when not in edit mode
             const textWidget = findTextWidget(this);
             if (textWidget && !this.isEditMode) {
-                drawCheckboxList(this, ctx, textWidget.value, config, app);
+                drawCheckboxList(this, ctx, textWidget.value, app);
             }
         };
     }
@@ -80,7 +85,7 @@ function isEmptyLine(line) {
     return line.trim() === "";
 }
 
-function setupClickHandler(node, textWidget, config, app) {
+function setupClickHandler(node, textWidget, app) {
     // Initialize clickableAreas
     node.clickableAreas = [];
     
@@ -108,7 +113,7 @@ function toggleCommentOnLine(textLines, lineIndex) {
     }
 }
 
-function drawCheckboxList(node, ctx, text, config, app) {
+function drawCheckboxList(node, ctx, text, app) {
     // Skip if node is collapsed
     if (node.flags && node.flags.collapsed) {
         return;
@@ -117,7 +122,7 @@ function drawCheckboxList(node, ctx, text, config, app) {
     const lines = text.split('\n');
     
     // Adjust node size to match text line count
-    const textHeight = Math.max(config.minNodeHeight, config.topNodePadding + lines.length * config.lineHeight + 10);
+    const textHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + lines.length * CONFIG.lineHeight + 10);
     
     if (node.size[1] < textHeight) {
         node.size[1] = textHeight;
@@ -128,7 +133,7 @@ function drawCheckboxList(node, ctx, text, config, app) {
     ctx.font = "14px monospace";
     ctx.textAlign = "left";
     if (text.trim() !== "") {
-        drawCheckboxItems(ctx, lines, config, node);
+        drawCheckboxItems(ctx, lines, node);
     } else {
         // If text is empty
         ctx.fillStyle = "#aaaaaa";
@@ -137,7 +142,7 @@ function drawCheckboxList(node, ctx, text, config, app) {
     }
 }
 
-function drawCheckboxItems(ctx, lines, config, node) {
+function drawCheckboxItems(ctx, lines, node) {
     // Clear clickableAreas before redrawing
     if (node) {
         node.clickableAreas = [];
@@ -147,23 +152,26 @@ function drawCheckboxItems(ctx, lines, config, node) {
         // Skip empty lines
         if (isEmptyLine(line)) return;
         
-        const y = config.topNodePadding + index * config.lineHeight;
+        const y = CONFIG.topNodePadding + index * CONFIG.lineHeight;
         const isCommented = line.trim().startsWith("//");
         
         // Draw checkbox and add to clickable areas
-        drawCheckbox(ctx, config, y, isCommented, node, index);
+        drawCheckbox(ctx, y, isCommented, node, index);
         
         // Remove comments/commas and draw text
-        const displayText = cleanTextForDisplay(line, isCommented);
-        drawLineText(ctx, displayText, config, y, isCommented);
+        const phraseText = getPhraseText(line, isCommented);
+        drawLineText(ctx, phraseText, y, isCommented);
+        
+        // Draw weight display and buttons
+        drawWeightControls(ctx, y, line, isCommented, node, index);
     });
 }
 
-function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
-    const checkboxX = config.leftNodePadding;
+function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
+    const checkboxX = CONFIG.leftNodePadding;
     const checkboxY = y;
-    const checkboxW = config.checkboxSize;
-    const checkboxH = config.checkboxSize;
+    const checkboxW = CONFIG.checkboxSize;
+    const checkboxH = CONFIG.checkboxSize;
     
     // Add to clickableAreas
     if (node) {
@@ -198,32 +206,118 @@ function drawCheckbox(ctx, config, y, isCommented, node, lineIndex) {
     ctx.stroke();
 }
 
-function cleanTextForDisplay(line, isCommented) {
-    let displayText = line;
+function getPhraseText(line, isCommented) {
+    let phraseText = line;
     
     // Remove leading //
     if (isCommented) {
-        displayText = line.trim().replace(/^\s*\/\/\s*/, '');
+        phraseText = line.trim().replace(/^\s*\/\/\s*/, '');
     }
     
     // Remove trailing comma
-    if (displayText.trim().endsWith(',')) {
-        displayText = displayText.substring(0, displayText.lastIndexOf(','));
+    if (phraseText.trim().endsWith(',')) {
+        phraseText = phraseText.substring(0, phraseText.lastIndexOf(','));
     }
     
-    return displayText;
+    return phraseText;
 }
 
-function drawLineText(ctx, displayText, config, y, isCommented) {
+function drawLineText(ctx, phraseText, y, isCommented) {
     // Set text color based on comment status
     ctx.fillStyle = isCommented ? "#777777" : "#ffffff";
     
     // Draw text
     // Calculate text baseline to align visual center with checkbox center
-    const checkboxCenter = y + config.checkboxSize / 2;
-    const textBaseline = checkboxCenter + config.fontSize * 0.35;
+    const checkboxCenter = y + CONFIG.checkboxSize / 2;
+    const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
     
-    ctx.fillText(displayText, config.leftNodePadding + config.checkboxSize + config.spaceBetweenCheckboxAndText, textBaseline);
+    ctx.fillText(phraseText, CONFIG.leftNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText, textBaseline);
+}
+
+function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
+    const nodeWidth = node.size[0];
+    const rightPadding = 10;
+    
+    // Get the text to check for weight
+    const textToCheck = isCommented ? 
+        (line.match(/^(\s*\/\/\s*)(.*)/)?.[2] || '') : 
+        line;
+    
+    // Skip if it's a comment-only line (no text after //)
+    if (isCommented && !textToCheck.trim()) return;
+    
+    const weightText = getWeightText(textToCheck);
+    const checkboxCenter = y + CONFIG.checkboxSize / 2;
+    
+    // Calculate positions from right to left
+    let currentX = nodeWidth - rightPadding;
+    
+    // Draw plus button
+    const plusButtonX = currentX - CONFIG.weightButtonSize;
+    const plusButtonY = y;
+    drawWeightButton(ctx, plusButtonX, plusButtonY, '+', node, lineIndex, 'weight_plus');
+    currentX = plusButtonX - 4;
+    
+    // Draw minus button
+    const minusButtonX = currentX - CONFIG.weightButtonSize;
+    const minusButtonY = y;
+    drawWeightButton(ctx, minusButtonX, minusButtonY, '-', node, lineIndex, 'weight_minus');
+    currentX = minusButtonX - 4;
+    
+    // Draw weight display
+    if (weightText) {
+        const weightLabelX = currentX - CONFIG.weightLabelWidth;
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "right";
+        const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
+        ctx.fillText(weightText, currentX - 2, textBaseline);
+        ctx.textAlign = "left"; // Reset alignment
+    }
+}
+
+function drawWeightButton(ctx, x, y, symbol, node, lineIndex, action) {
+    const buttonSize = CONFIG.weightButtonSize;
+    
+    // Add to clickable areas
+    if (node) {
+        node.clickableAreas.push({
+            x: x,
+            y: y,
+            w: buttonSize,
+            h: buttonSize,
+            type: 'weight_button',
+            lineIndex: lineIndex,
+            action: action,
+            node: node
+        });
+    }
+    
+    // Draw button border
+    ctx.strokeStyle = "#666666";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, buttonSize, buttonSize);
+    
+    // Draw symbol with lines
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    const centerX = x + buttonSize / 2;
+    const centerY = y + buttonSize / 2;
+    const symbolSize = 6;
+    
+    ctx.beginPath();
+    if (symbol === '+') {
+        // Horizontal line
+        ctx.moveTo(centerX - symbolSize / 2, centerY);
+        ctx.lineTo(centerX + symbolSize / 2, centerY);
+        // Vertical line
+        ctx.moveTo(centerX, centerY - symbolSize / 2);
+        ctx.lineTo(centerX, centerY + symbolSize / 2);
+    } else if (symbol === '-') {
+        // Horizontal line only
+        ctx.moveTo(centerX - symbolSize / 2, centerY);
+        ctx.lineTo(centerX + symbolSize / 2, centerY);
+    }
+    ctx.stroke();
 }
 
 function findClickedArea(pos) {
@@ -237,6 +331,59 @@ function findClickedArea(pos) {
     return null;
 }
 
+function parseWeight(text) {
+    const match = text.match(/\(([^:]+):(\d+\.?\d*)\)/);
+    if (match) {
+        const weight = parseFloat(match[2]);
+        return isNaN(weight) ? 1.0 : weight;
+    }
+    return 1.0;
+}
+
+function setWeight(text, weight) {
+    const cleanText = text.replace(/\(([^:]+):(\d+\.?\d*)\)/, '$1').trim();
+    // Remove trailing comma
+    const textWithoutComma = cleanText.replace(/,\s*$/, '').trim();
+    if (weight === 1.0) {
+        return textWithoutComma;
+    }
+    return `(${textWithoutComma}:${weight.toFixed(1)})`;
+}
+
+function getWeightText(text) {
+    const weight = parseWeight(text);
+    return weight === 1.0 ? '' : weight.toFixed(1);
+}
+
+function adjustWeight(text, delta) {
+    const currentWeight = parseWeight(text);
+    const newWeight = Math.round((currentWeight + delta) * 10) / 10;
+    
+    const minWeight = CONFIG.minWeight;
+    const maxWeight = CONFIG.maxWeight;
+    
+    // Handle out-of-range values
+    if (newWeight < minWeight) {
+        return text; // Don't allow values below minimum
+    }
+    
+    if (newWeight > maxWeight) {
+        // If trying to increase beyond maximum, don't change
+        if (delta > 0) {
+            return text;
+        }
+        // If trying to decrease from above maximum, clamp to maximum
+        return setWeight(text, maxWeight);
+    }
+    
+    // Special case: if current weight is above maximum and we're decreasing
+    if (currentWeight > maxWeight && delta < 0) {
+        return setWeight(text, maxWeight);
+    }
+    
+    return setWeight(text, newWeight);
+}
+
 function handleClickableAreaAction(area, textWidget, app) {
     switch (area.action) {
         case 'toggle':
@@ -247,6 +394,42 @@ function handleClickableAreaAction(area, textWidget, app) {
                 app.graph.setDirtyCanvas(true);
             }
             break;
-        // Future actions can be added here
+        case 'weight_plus':
+            adjustWeightInText(textWidget, area.lineIndex, 0.1, app);
+            break;
+        case 'weight_minus':
+            adjustWeightInText(textWidget, area.lineIndex, -0.1, app);
+            break;
+    }
+}
+
+function adjustWeightInText(textWidget, lineIndex, delta, app) {
+    const textLines = textWidget.value.split('\n');
+    if (lineIndex >= 0 && lineIndex < textLines.length) {
+        const line = textLines[lineIndex];
+        
+        // Check if line starts with comment
+        if (line.trim().startsWith('//')) {
+            const commentMatch = line.match(/^(\s*\/\/\s*)(.*)/);
+            if (commentMatch && commentMatch[2].trim()) {
+                const adjustedText = adjustWeight(commentMatch[2], delta);
+                textLines[lineIndex] = commentMatch[1] + adjustedText;
+            }
+        } else if (line.includes('//')) {
+            // Handle lines with inline comments like "abc // def"
+            const commentIndex = line.indexOf('//');
+            const beforeComment = line.substring(0, commentIndex).trim();
+            const comment = line.substring(commentIndex);
+            
+            if (beforeComment) {
+                const adjustedText = adjustWeight(beforeComment, delta);
+                textLines[lineIndex] = adjustedText + ' ' + comment;
+            }
+        } else {
+            // Regular line without comments
+            textLines[lineIndex] = adjustWeight(line, delta);
+        }
+        textWidget.value = textLines.join('\n');
+        app.graph.setDirtyCanvas(true);
     }
 }
