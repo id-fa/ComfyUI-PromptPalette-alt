@@ -17,11 +17,14 @@ The project follows ComfyUI's custom node structure:
 
 ### Core Components
 
-1. **PromptPalette Node** (`nodes.py:4-48`):
-   - Processes multiline text input by filtering commented lines (lines starting with `//`)
+1. **PromptPalette Node** (`nodes.py:4-62`):
+   - Processes multiline text input by filtering commented lines (lines starting with `//` or `#`)
    - Handles inline comments by splitting on `//` and keeping only the content before
-   - Adds comma separators to non-commented lines
-   - Combines result with optional prefix input
+   - Uses custom separator (default: `, `) to join non-commented lines
+   - Supports empty separator for no spacing/newlines between phrases
+   - Combines result with optional prefix input using the same separator
+   - Supports adding newline at end of output (`add_newline` parameter)
+   - Supports adding newline after separator (`separator_newline` parameter)
    - Returns formatted string output
 
 2. **Web Extension** (`web/index.js:21-62`):
@@ -31,46 +34,93 @@ The project follows ComfyUI's custom node structure:
    - Manages edit/display mode toggling
 
 3. **UI System**:
-   - **Edit mode**: Shows standard multiline text widget for direct text editing
+   - **Edit mode**: Shows standard multiline text widget, separator input, and newline options for direct editing
    - **Display mode**: Custom-drawn interface with checkboxes, phrase text, and weight controls
    - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment
    - **Visual feedback**: Different colors for active/inactive text, bold text for weighted phrases
+   - **Text wrapping**: Long phrases automatically wrap within node boundaries
+   - **Description comments**: `#` comments display as italic explanatory text above phrases
 
 ### Advanced Features
 
-4. **Weight System** (`web/index.js:425-480`):
+4. **Custom Separator System** (`nodes.py:26-60`):
+   - Configurable separator input parameter (default: `, `)
+   - Empty separator support for no spacing between phrases
+   - Consistent separator usage for prefix concatenation
+   - Backend filtering of both `//` (toggle) and `#` (description) comments
+   - Optional newline addition after separators (`separator_newline` parameter)
+   - Optional newline addition at end of output (`add_newline` parameter)
+
+5. **Text Wrapping System** (`web/index.js:203-232`):
+   - `wrapText()` function for word-based text wrapping
+   - `calculateAvailableTextWidth()` for dynamic width calculation
+   - Automatic node height adjustment based on wrapped content
+   - Font-aware measurement for accurate wrapping
+
+6. **Description Comment System** (`web/index.js:343-357`):
+   - `#` comments display as italic explanatory text above phrases
+   - `isDescriptionComment()` and `findDescriptionForLine()` helper functions
+   - Separate handling from toggle comments (`//`)
+   - Integrated with text wrapping for long descriptions
+
+7. **Weight System** (`web/index.js:425-480`):
    - Supports weight notation format: `(phrase:1.5)` 
    - Weight range: 0.1 to 2.0 with 0.1 increments
    - Visual indicators: Bold text for non-1.0 weights, weight value display
    - Interactive +/- buttons for weight adjustment
 
-5. **Theme Integration** (`web/index.js:481-525`):
+8. **Theme Integration** (`web/index.js:481-525`):
    - Dynamically reads ComfyUI CSS variables for theme colors
    - Supports both light and dark themes
    - Color caching for performance
    - Handles 3-digit hex color expansion
 
+9. **Output Control System** (`nodes.py:17-19`, `web/index.js:106-153`):
+   - `add_newline` parameter adds newline at end of final output
+   - `separator_newline` parameter adds newline after each separator
+   - `trailing_separator` parameter adds separator after the last phrase
+   - All options available as checkboxes in edit mode
+   - Provides flexible output formatting for different use cases
+
+## Development Commands
+
+This project requires no build process or package management - it's a pure ComfyUI extension.
+
+### Testing
+- **Manual testing**: Install in ComfyUI's `custom_nodes` directory and restart ComfyUI
+- **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling and weight adjustment
+- **No automated tests**: Testing is entirely manual through the ComfyUI interface
+
+### Version Management
+- Version specified in `pyproject.toml` for Comfy Registry publishing
+- Follow semantic versioning for releases
+
 ## Development Notes
 
-- No build process required - this is a pure ComfyUI extension
-- Testing requires ComfyUI installation and manual verification through the UI
+- No dependencies beyond ComfyUI itself
 - The extension uses ComfyUI's app registration system (`app.registerExtension`)
 - UI constants are defined in `CONFIG` object (`web/index.js:3-15`)
 - Click handling uses coordinate-based area detection system
+- All state changes trigger canvas redraws via `app.graph.setDirtyCanvas(true)`
 
 ## Key Patterns
 
-- **Comment toggling**: Lines starting with `//` are filtered out in backend, toggled via checkbox clicks
+- **Comment system**: `//` for toggle comments (filtered/unfiltered), `#` for description comments (display only)
+- **Custom separator**: Configurable text joining with empty string support for no spacing
+- **Output formatting options**: `add_newline` for end-of-output newline, `separator_newline` for separator newlines, `trailing_separator` for separator after last phrase
+- **Text wrapping**: Word-based wrapping with dynamic width calculation and height adjustment
 - **Weight adjustment**: Uses regex parsing to handle `(text:weight)` notation
 - **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons)
-- **State management**: Node tracks edit mode, clickable areas, and widget visibility
+- **State management**: Node tracks edit mode, clickable areas, widget visibility, and text wrapping
 - **Canvas redrawing**: Triggered via `app.graph.setDirtyCanvas(true)` after state changes
 
 ## Code Organization
 
 - **Extension Registration**: Lines 21-62
 - **UI Control Functions**: Lines 68-179 (widget management, click handling)
-- **Drawing Functions**: Lines 185-422 (canvas rendering, visual elements)
+- **Text Wrapping Utilities**: Lines 200-232 (text wrapping, width calculation)
+- **Drawing Functions**: Lines 235-422 (canvas rendering, visual elements, comment display)
+- **Comment Parsing**: Lines 343-357 (description comment handling)
 - **Weight System**: Lines 425-480 (parsing, adjustment, formatting)
 - **Theme/Color System**: Lines 481-525 (dynamic theme integration)
 
