@@ -37,8 +37,24 @@ app.registerExtension({
             }
             this.isEditMode = false;
             const textWidget = findTextWidget(this);
+            const separatorWidget = findSeparatorWidget(this);
+            const newlineWidget = findNewlineWidget(this);
+            const separatorNewlineWidget = findSeparatorNewlineWidget(this);
+            const trailingSeparatorWidget = findTrailingSeparatorWidget(this);
             if (textWidget) {
                 textWidget.hidden = true;
+                if (separatorWidget) {
+                    separatorWidget.hidden = true;
+                }
+                if (newlineWidget) {
+                    newlineWidget.hidden = true;
+                }
+                if (separatorNewlineWidget) {
+                    separatorNewlineWidget.hidden = true;
+                }
+                if (trailingSeparatorWidget) {
+                    trailingSeparatorWidget.hidden = true;
+                }
                 addEditButton(this, textWidget, app);
                 setupClickHandler(this, textWidget, app);
             }
@@ -75,10 +91,66 @@ function findTextWidget(node) {
     return null;
 }
 
+function findSeparatorWidget(node) {
+    if (!node.widgets) return null;
+    for (const w of node.widgets) {
+        if (w.name === "separator") {
+            return w;
+        }
+    }
+    return null;
+}
+
+function findNewlineWidget(node) {
+    if (!node.widgets) return null;
+    for (const w of node.widgets) {
+        if (w.name === "add_newline") {
+            return w;
+        }
+    }
+    return null;
+}
+
+function findSeparatorNewlineWidget(node) {
+    if (!node.widgets) return null;
+    for (const w of node.widgets) {
+        if (w.name === "separator_newline") {
+            return w;
+        }
+    }
+    return null;
+}
+
+function findTrailingSeparatorWidget(node) {
+    if (!node.widgets) return null;
+    for (const w of node.widgets) {
+        if (w.name === "trailing_separator") {
+            return w;
+        }
+    }
+    return null;
+}
+
 function addEditButton(node, textWidget, app) {
     const textButton = node.addWidget("button", "Edit", "edit_text", () => {
         node.isEditMode = !node.isEditMode;
         textWidget.hidden = !node.isEditMode;
+        const separatorWidget = findSeparatorWidget(node);
+        if (separatorWidget) {
+            separatorWidget.hidden = !node.isEditMode;
+        }
+        const newlineWidget = findNewlineWidget(node);
+        if (newlineWidget) {
+            newlineWidget.hidden = !node.isEditMode;
+        }
+        const separatorNewlineWidget = findSeparatorNewlineWidget(node);
+        if (separatorNewlineWidget) {
+            separatorNewlineWidget.hidden = !node.isEditMode;
+        }
+        const trailingSeparatorWidget = findTrailingSeparatorWidget(node);
+        if (trailingSeparatorWidget) {
+            trailingSeparatorWidget.hidden = !node.isEditMode;
+        }
         textButton.name = node.isEditMode ? "Save" : "Edit";
         app.graph.setDirtyCanvas(true); // Redraw canvas
     });
@@ -179,6 +251,41 @@ function adjustWeightInText(textWidget, lineIndex, delta, app) {
 }
 
 // ========================================
+// Text Wrapping Utilities
+// ========================================
+
+function wrapText(ctx, text, maxWidth) {
+    if (!text.trim()) return [''];
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = ctx.measureText(testLine).width;
+        
+        if (testWidth <= maxWidth || !currentLine) {
+            currentLine = testLine;
+        } else {
+            lines.push(currentLine);
+            currentLine = word;
+        }
+    }
+    
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+    
+    return lines.length > 0 ? lines : [''];
+}
+
+function calculateAvailableTextWidth(nodeWidth) {
+    // Available width = node width - left padding - checkbox - spacing - weight controls - right padding
+    return nodeWidth - CONFIG.sideNodePadding - CONFIG.checkboxSize - CONFIG.spaceBetweenCheckboxAndText - 120 - CONFIG.sideNodePadding;
+}
+
+// ========================================
 // Drawing
 // ========================================
 
@@ -190,8 +297,40 @@ function drawCheckboxList(node, ctx, text, app) {
 
     const lines = text.split('\n');
     
-    // Adjust node size to match text line count
-    const textHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + lines.length * CONFIG.lineHeight + 10);
+    // Calculate total lines including wrapped lines
+    let totalWrappedLines = 0;
+    const availableWidth = calculateAvailableTextWidth(node.size[0]);
+    
+    lines.forEach((line, index) => {
+        if (isEmptyLine(line) || isDescriptionComment(line)) return;
+        
+        // Check if this line has a description comment
+        const description = findDescriptionForLine(lines, index);
+        if (description) {
+            ctx.font = `italic ${CONFIG.fontSize - 1}px monospace`;
+            const descWrappedLines = wrapText(ctx, description, availableWidth + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText);
+            totalWrappedLines += descWrappedLines.length;
+        }
+        
+        const isCommented = line.trim().startsWith("//");
+        const phraseText = getPhraseText(line, isCommented);
+        
+        // Set font for measurement (same as used in drawing)
+        const textToCheck = isCommented ? 
+            (line.match(/^(\s*\/\/\s*)(.*)/)?.[2] || '') : 
+            line;
+        const weight = parseWeight(textToCheck);
+        const isBold = weight !== 1.0;
+        ctx.font = isBold ? 
+            `bold ${CONFIG.fontSize}px monospace` : 
+            `${CONFIG.fontSize}px monospace`;
+        
+        const wrappedLines = wrapText(ctx, phraseText, availableWidth);
+        totalWrappedLines += wrappedLines.length;
+    });
+    
+    // Adjust node size to match wrapped text line count
+    const textHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + totalWrappedLines * CONFIG.lineHeight + 10);
     
     if (node.size[1] < textHeight) {
         node.size[1] = textHeight;
@@ -217,27 +356,88 @@ function drawCheckboxItems(ctx, lines, node) {
         node.clickableAreas = [];
     }
     
+    let currentY = CONFIG.topNodePadding;
+    const availableWidth = calculateAvailableTextWidth(node.size[0]);
+    
     lines.forEach((line, index) => {
-        // Skip empty lines
-        if (isEmptyLine(line)) return;
+        // Skip empty lines and description comments (# comments are not drawn directly)
+        if (isEmptyLine(line) || isDescriptionComment(line)) return;
         
-        const y = CONFIG.topNodePadding + index * CONFIG.lineHeight;
         const isCommented = line.trim().startsWith("//");
         
-        // Draw checkbox and add to clickable areas
-        drawCheckbox(ctx, y, isCommented, node, index);
+        // Check if this line has a description comment
+        const description = findDescriptionForLine(lines, index);
         
-        // Remove comments/commas and draw text
+        // Draw description comment if exists
+        if (description) {
+            ctx.font = `italic ${CONFIG.fontSize - 1}px monospace`;
+            const descWrappedLines = wrapText(ctx, description, availableWidth + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText);
+            
+            const colors = getColors();
+            ctx.fillStyle = colors.inactiveTextColor;
+            ctx.textAlign = "left";
+            
+            descWrappedLines.forEach((descLine, wrapIndex) => {
+                const descY = currentY + wrapIndex * CONFIG.lineHeight;
+                const checkboxCenter = descY + CONFIG.checkboxSize / 2;
+                const textBaseline = checkboxCenter + (CONFIG.fontSize - 1) * 0.35;
+                ctx.fillText(descLine, CONFIG.sideNodePadding, textBaseline);
+            });
+            
+            currentY += descWrappedLines.length * CONFIG.lineHeight;
+        }
+        
+        // Get phrase text for wrapping
         const phraseText = getPhraseText(line, isCommented);
-        drawPhraseText(ctx, phraseText, y, isCommented, line);
         
-        // Draw weight display and buttons
-        drawWeightControls(ctx, y, line, isCommented, node, index);
+        // Set font for text measurement (same as used in drawPhraseText)
+        const textToCheck = isCommented ? 
+            (line.match(/^(\s*\/\/\s*)(.*)/)?.[2] || '') : 
+            line;
+        const weight = parseWeight(textToCheck);
+        const isBold = weight !== 1.0;
+        ctx.font = isBold ? 
+            `bold ${CONFIG.fontSize}px monospace` : 
+            `${CONFIG.fontSize}px monospace`;
+        
+        // Wrap text
+        const wrappedLines = wrapText(ctx, phraseText, availableWidth);
+        
+        // Draw checkbox (only on first line)
+        drawCheckbox(ctx, currentY, isCommented, node, index);
+        
+        // Draw wrapped text lines
+        wrappedLines.forEach((wrappedLine, wrapIndex) => {
+            const lineY = currentY + wrapIndex * CONFIG.lineHeight;
+            drawPhraseTextLine(ctx, wrappedLine, lineY, isCommented, isBold);
+        });
+        
+        // Draw weight controls (only on first line)
+        drawWeightControls(ctx, currentY, line, isCommented, node, index);
+        
+        // Move to next position
+        currentY += wrappedLines.length * CONFIG.lineHeight;
     });
 }
 
 function isEmptyLine(line) {
     return line.trim() === "";
+}
+
+function isDescriptionComment(line) {
+    return line.trim().startsWith("#");
+}
+
+function getDescriptionFromComment(line) {
+    return line.trim().replace(/^\s*#\s*/, '');
+}
+
+function findDescriptionForLine(lines, lineIndex) {
+    // Look for # comment in the previous line
+    if (lineIndex > 0 && isDescriptionComment(lines[lineIndex - 1])) {
+        return getDescriptionFromComment(lines[lineIndex - 1]);
+    }
+    return null;
 }
 
 function getPhraseText(line, isCommented) {
@@ -308,18 +508,11 @@ function drawCheckbox(ctx, y, isCommented, node, lineIndex) {
     }
 }
 
-function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
+function drawPhraseTextLine(ctx, wrappedLine, y, isCommented, isBold) {
     // Set text color based on comment status
     const colors = getColors();
     ctx.fillStyle = isCommented ? colors.inactiveTextColor : colors.defaultTextColor;
     ctx.textAlign = "left";
-    
-    // Check if the original line has weight notation (not 1.0)
-    const textToCheck = isCommented ? 
-        (originalLine.match(/^(\s*\/\/\s*)(.*)/)?.[2] || '') : 
-        originalLine;
-    const weight = parseWeight(textToCheck);
-    const isBold = weight !== 1.0;
     
     // Set font with bold if weight is not 1.0
     ctx.font = isBold ? 
@@ -330,7 +523,7 @@ function drawPhraseText(ctx, phraseText, y, isCommented, originalLine) {
     const checkboxCenter = y + CONFIG.checkboxSize / 2;
     const textBaseline = checkboxCenter + CONFIG.fontSize * 0.35;
     
-    ctx.fillText(phraseText, CONFIG.sideNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText, textBaseline);
+    ctx.fillText(wrappedLine, CONFIG.sideNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText, textBaseline);
 }
 
 function drawWeightControls(ctx, y, line, isCommented, node, lineIndex) {
