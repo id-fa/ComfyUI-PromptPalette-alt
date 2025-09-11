@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ComfyUI-PromptPalette is a custom node for ComfyUI that provides an interactive prompt editing interface with checkbox-based phrase toggling and weight adjustment controls.
+ComfyUI-PromptPalette-alt is a custom node for ComfyUI that provides an interactive prompt editing interface with checkbox-based phrase toggling and weight adjustment controls.
 
 ## Architecture
 
@@ -13,7 +13,6 @@ The project follows ComfyUI's custom node structure:
 - **`__init__.py`**: Standard ComfyUI entry point that imports and exports node mappings and web directory
 - **`nodes.py`**: Backend Python logic containing the `PromptPalette` class that processes text input
 - **`web/index.js`**: Frontend JavaScript extension that registers with ComfyUI's app system to provide custom UI
-- **`pyproject.toml`**: Project metadata for Comfy Registry publishing
 
 ### Core Components
 
@@ -91,14 +90,9 @@ This project requires no build process or package management - it's a pure Comfy
 - **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling and weight adjustment
 - **No automated tests**: Testing is entirely manual through the ComfyUI interface
 
-### Version Management
-- Version specified in `pyproject.toml` for Comfy Registry publishing
-- Follow semantic versioning for releases
-
 ## Development Notes
 
 - No dependencies beyond ComfyUI itself
-- The extension uses ComfyUI's app registration system (`app.registerExtension`)
 - UI constants are defined in `CONFIG` object (`web/index.js:3-15`)
 - Click handling uses coordinate-based area detection system
 - All state changes trigger canvas redraws via `app.graph.setDirtyCanvas(true)`
