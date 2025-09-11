@@ -72,5 +72,5 @@ class PromptPalette:
 
 
 NODE_CLASS_MAPPINGS = {"PromptPalette": PromptPalette}
-NODE_DISPLAY_NAME_MAPPINGS = {"PromptPalette": "Prompt Palette"}
+NODE_DISPLAY_NAME_MAPPINGS = {"PromptPalette": "PromptPalette-alt"}
 WEB_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "web")
