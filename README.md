@@ -2,7 +2,7 @@
 
 マウス操作だけでフレーズの切り替えができる、プロンプト編集を簡単にするComfyUI用カスタムノード
 
-![Example](examples/example-01.png)
+![Example](examples/example-alt01.png)
 
 ## 機能
 
@@ -23,7 +23,6 @@
 2. **テキスト編集**:
    - **Edit**ボタンをクリックして編集モードに切り替え
    - 1行に1つのフレーズを入力
-     ![Edit mode example](examples/example-02.png)
    - **Save**ボタンをクリックして編集を完了
 3. **フレーズ制御**:
    - 表示モードで**チェックボックス**を切り替えてフレーズを有効/無効化
@@ -36,7 +35,6 @@
    - コメントは次のフレーズの上に説明テキストとして表示
 6. **出力**:
    - 選択されたフレーズが設定された区切り文字で出力される
-     ![Output example](examples/example-03.png)
 
 ## 高度な使い方
 
@@ -59,7 +57,7 @@
 
 A custom node for ComfyUI that makes prompt editing easier by allowing phrase switching with just mouse operations
 
-![Example](examples/example-01.png)
+![Example](examples/example-alt01.png)
 
 ## Features
 
@@ -80,7 +78,6 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 2. **Edit text**:
    - Click the **Edit** button to switch to edit mode
    - Enter one phrase per line
-     ![Edit mode example](examples/example-02.png)
    - Click the **Save** button to complete editing
 3. **Control phrases**:
    - **Toggle checkboxes** in display mode to enable/disable phrases
@@ -93,7 +90,6 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
    - Comments appear above the following phrase as explanatory text
 6. **Output**:
    - Selected phrases are output with the configured separator
-     ![Output example](examples/example-03.png)
 
 ## Advanced Usage
 
