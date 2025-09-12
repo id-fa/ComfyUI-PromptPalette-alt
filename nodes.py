@@ -8,7 +8,7 @@ class PromptPalette:
             "required": {
                 "text": (
                     "STRING",
-                    {"default": "", "multiline": True},
+                    {"default": "", "multiline": True, "rows": 8},
                 )
             },
             "optional": {

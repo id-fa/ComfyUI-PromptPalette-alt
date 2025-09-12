@@ -121,3 +121,27 @@ This project requires no build process or package management - it's a pure Comfy
 ## Installation & Usage
 
 Standard ComfyUI custom node installation - clone into `custom_nodes` directory and restart ComfyUI. No additional setup or dependencies required.
+
+## Known Issues
+
+### Preview White Screen Bug
+- **Issue**: Preview area shows white screen when weight feature is used (e.g., `(line:1.1)`)
+- **Status**: Unresolved 
+- **Investigation**: 
+  - Text generation works correctly (confirmed via console logs)
+  - Canvas area drawing works (borders and "Preview:" label appear)
+  - Text wrapping functions correctly
+  - Issue appears to be in text rendering stage
+  - `ctx.fillText()` calls execute but text doesn't appear visually
+- **Workaround**: None currently available
+- **Debug Info**: Extensive logging shows all functions execute without errors, but final text rendering fails silently
+- **Technical Notes**: 
+  - Issue may be related to Canvas context state or font rendering
+  - Color values are correctly set (`#dddddd`)
+  - Text coordinates are within valid canvas bounds
+  - Problem occurs specifically with weighted text format, not with plain text
+
+### Development Status
+- Basic functionality: ✅ Working
+- Preview functionality: ❌ Partially broken (white screen issue)
+- Scroll functionality: ❌ Initially starts at wrong offset (scroll offset: 3 instead of 0)

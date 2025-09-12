@@ -12,6 +12,13 @@ const CONFIG = {
     weightLabelWidth: 24,
     minWeight: 0.1,
     maxWeight: 2.0,
+    previewSeparator: 20,    // Space between main content and preview
+    previewHeight: 110,      // Height for 5 lines + header + padding
+    previewFontSize: 12,     // Smaller font for preview
+    previewLineHeight: 16,   // Line height for preview text
+    previewVisibleLines: 5,  // Number of visible lines in preview
+    scrollBarWidth: 12,      // Width of scroll bar
+    scrollButtonHeight: 16,  // Height of scroll up/down buttons
 };
 
 // ========================================
@@ -155,7 +162,22 @@ function addEditButton(node, textWidget, app) {
         app.graph.setDirtyCanvas(true); // Redraw canvas
     });
     
-    // Add spacing below Edit button
+    // Add preview toggle button
+    const previewButton = node.addWidget("button", "Hide Preview", "toggle_preview", () => {
+        node.hidePreview = !node.hidePreview;
+        previewButton.name = node.hidePreview ? "Show Preview" : "Hide Preview";
+        // Trigger node size recalculation
+        app.graph.setDirtyCanvas(true);
+    });
+    
+    // Initialize preview toggle state
+    node.hidePreview = false;
+    
+    // Initialize scroll state for preview
+    node.previewScrollOffset = 0;
+    node.lastPreviewText = "";
+    
+    // Add spacing below buttons
     const spacer = node.addWidget("text", "", "");
     spacer.hidden = true;
     spacer.computeSize = () => [0, 6];
@@ -168,6 +190,7 @@ function setupClickHandler(node, textWidget, app) {
     // Add helper methods to node
     node.findClickedArea = findClickedArea;
     node.handleClickableAreaAction = handleClickableAreaAction;
+    node.isPositionInPreview = isPositionInPreview;
     
     node.onMouseDown = function(e, pos) {
         if (this.isEditMode) return;
@@ -177,6 +200,8 @@ function setupClickHandler(node, textWidget, app) {
             this.handleClickableAreaAction(clickedArea, textWidget, app);
         }
     };
+    
+    // Remove wheel handler - we'll use clickable scroll buttons instead
 }
 
 function findClickedArea(pos) {
@@ -188,6 +213,19 @@ function findClickedArea(pos) {
         }
     }
     return null;
+}
+
+function isPositionInPreview(pos) {
+    if (this.hidePreview) return false;
+    
+    const [x, y] = pos;
+    const nodeHeight = this.size[1];
+    const previewY = nodeHeight - CONFIG.previewHeight - 10;
+    const previewX = CONFIG.sideNodePadding;
+    const previewWidth = this.size[0] - CONFIG.sideNodePadding * 2;
+    
+    return x >= previewX && x <= previewX + previewWidth &&
+           y >= previewY && y <= previewY + CONFIG.previewHeight;
 }
 
 function handleClickableAreaAction(area, textWidget, app) {
@@ -205,6 +243,15 @@ function handleClickableAreaAction(area, textWidget, app) {
             break;
         case 'weight_minus':
             adjustWeightInText(textWidget, area.lineIndex, -0.1, app);
+            break;
+        case 'scroll_up':
+            this.previewScrollOffset = Math.max(0, this.previewScrollOffset - 1);
+            app.graph.setDirtyCanvas(true);
+            break;
+        case 'scroll_down':
+            // Max scroll will be calculated in drawPreview
+            this.previewScrollOffset = this.previewScrollOffset + 1;
+            app.graph.setDirtyCanvas(true);
             break;
     }
 }
@@ -329,11 +376,14 @@ function drawCheckboxList(node, ctx, text, app) {
         totalWrappedLines += wrappedLines.length;
     });
     
-    // Adjust node size to match wrapped text line count
-    const textHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + totalWrappedLines * CONFIG.lineHeight + 10);
+    // Adjust node size to match wrapped text line count + preview area (if shown)
+    const baseTextHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + totalWrappedLines * CONFIG.lineHeight + 20);
+    const widgetSpacing = 70; // Space for ComfyUI widgets (buttons)
+    const previewHeight = node.hidePreview ? 0 : (CONFIG.previewSeparator + CONFIG.previewHeight);
+    const totalHeight = baseTextHeight + widgetSpacing + previewHeight;
     
-    if (node.size[1] < textHeight) {
-        node.size[1] = textHeight;
+    if (node.size[1] !== totalHeight) {
+        node.size[1] = totalHeight;
         app.graph.setDirtyCanvas(true);
     }
 
@@ -346,8 +396,13 @@ function drawCheckboxList(node, ctx, text, app) {
         // If text is empty
         ctx.fillStyle = getColors().inactiveTextColor;
         ctx.textAlign = "center";
-        ctx.fillText("No Text", node.size[0]/2, node.size[1]/2);
+        const widgetAndPreviewHeight = node.hidePreview ? 70 : (70 + CONFIG.previewHeight + CONFIG.previewSeparator);
+        const textAreaHeight = node.size[1] - widgetAndPreviewHeight;
+        ctx.fillText("No Text", node.size[0]/2, CONFIG.topNodePadding + textAreaHeight/2);
     }
+    
+    // Draw preview area
+    drawPreview(node, ctx);
 }
 
 function drawCheckboxItems(ctx, lines, node) {
@@ -714,4 +769,245 @@ function expandHexColor(color) {
         return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
     }
     return color;
+}
+
+// ========================================
+// Preview Functionality
+// ========================================
+
+function generatePreview(node) {
+    const textWidget = findTextWidget(node);
+    const separatorWidget = findSeparatorWidget(node);
+    const addNewlineWidget = findNewlineWidget(node);
+    const separatorNewlineWidget = findSeparatorNewlineWidget(node);
+    const trailingSeparatorWidget = findTrailingSeparatorWidget(node);
+
+    if (!textWidget) return "";
+
+    const text = textWidget.value || "";
+    const separator = separatorWidget ? (separatorWidget.value || ", ") : ", ";
+    const addNewline = addNewlineWidget ? addNewlineWidget.value : false;
+    const separatorNewline = separatorNewlineWidget ? separatorNewlineWidget.value : false;
+    const trailingSeparator = trailingSeparatorWidget ? trailingSeparatorWidget.value : false;
+
+    // Reset scroll position when content changes
+    if (!node.lastPreviewText || node.lastPreviewText !== text) {
+        node.previewScrollOffset = 0;
+        node.lastPreviewText = text;
+    }
+
+    // Replicate Python's process method logic
+    return processTextForPreview(text, separator, addNewline, separatorNewline, trailingSeparator);
+}
+
+function processTextForPreview(text, separator = ", ", addNewline = false, separatorNewline = false, trailingSeparator = false) {
+    const lines = text.split("\n");
+    const filteredLines = [];
+
+    for (let line of lines) {
+        // Skip empty lines
+        if (!line.trim()) {
+            continue;
+        }
+        // Skip commented lines (// for toggle, # for description)
+        if (line.trim().startsWith("//") || line.trim().startsWith("#")) {
+            continue;
+        }
+        // Remove inline comments
+        if (line.includes("//")) {
+            line = line.split("//")[0].trimEnd();
+        }
+        if (line.trim()) {
+            filteredLines.push(line.trimEnd());
+        }
+    }
+
+    // Join with custom separator
+    let result;
+    if (separator === "") {
+        // No separator, no newlines
+        result = filteredLines.join("");
+    } else {
+        // Add newline to separator if requested
+        const effectiveSeparator = separatorNewline ? separator + "\n" : separator;
+        result = filteredLines.join(effectiveSeparator);
+    }
+
+    // Add trailing separator if requested
+    if (trailingSeparator && separator !== "" && filteredLines.length > 0) {
+        const effectiveSeparator = separatorNewline ? separator + "\n" : separator;
+        result += effectiveSeparator;
+    }
+
+    if (addNewline) {
+        result += "\n";
+    }
+
+    return result;
+}
+
+function drawPreview(node, ctx) {
+    if (!node || node.isEditMode || node.hidePreview) return;
+
+    try {
+        const preview = generatePreview(node);
+        
+        const nodeWidth = node.size[0];
+        const nodeHeight = node.size[1];
+    
+    // Calculate preview area (position above the widget area)
+    // ComfyUI widgets are typically placed at the bottom, so we position preview above them
+    const widgetAreaHeight = 75; // Space for widgets (Edit, Hide Preview buttons)
+    const previewY = nodeHeight - CONFIG.previewHeight - widgetAreaHeight;
+    const previewX = CONFIG.sideNodePadding;
+    const previewWidth = nodeWidth - CONFIG.sideNodePadding * 2;
+
+    // Draw preview background
+    const colors = getColors();
+    ctx.fillStyle = colors.comfyInputBg + "80"; // Semi-transparent background
+    ctx.fillRect(previewX, previewY, previewWidth, CONFIG.previewHeight);
+
+    // Draw preview border
+    ctx.strokeStyle = colors.borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(previewX, previewY, previewWidth, CONFIG.previewHeight);
+
+    // Draw preview label
+    ctx.fillStyle = colors.descripText;
+    ctx.font = `${CONFIG.previewFontSize}px monospace`;
+    ctx.textAlign = "left";
+    ctx.fillText("Preview:", previewX + 6, previewY + 15);
+
+    // Handle empty preview
+    if (!preview || !preview.trim()) {
+        ctx.fillStyle = colors.inactiveTextColor;
+        ctx.fillText("(empty)", previewX + 6, previewY + 35);
+        return;
+    }
+
+    // Prepare text content for scrollable display
+    ctx.fillStyle = colors.defaultTextColor;
+    ctx.font = `${CONFIG.previewFontSize}px monospace`;
+    ctx.textAlign = "left";
+    const textAreaWidth = previewWidth - 12 - CONFIG.scrollBarWidth;
+    
+    // Split by newlines first, then wrap each line
+    const previewLines = preview.split('\n');
+    let allWrappedLines = [];
+    
+    for (const line of previewLines) {
+        if (line === '') {
+            // Empty line - add as is
+            allWrappedLines.push('');
+        } else {
+            // Wrap the line and add all wrapped parts
+            const wrappedLine = wrapText(ctx, line, textAreaWidth);
+            allWrappedLines = allWrappedLines.concat(wrappedLine);
+        }
+    }
+    
+    // Calculate scroll bounds
+    const maxScrollOffset = Math.max(0, allWrappedLines.length - CONFIG.previewVisibleLines);
+    node.previewScrollOffset = Math.max(0, Math.min(node.previewScrollOffset || 0, maxScrollOffset));
+    
+    // Draw visible lines with scroll offset
+    const textStartY = previewY + 35;
+    
+    for (let i = 0; i < CONFIG.previewVisibleLines && (i + node.previewScrollOffset) < allWrappedLines.length; i++) {
+        const lineIndex = i + node.previewScrollOffset;
+        const line = allWrappedLines[lineIndex];
+        const currentY = textStartY + i * CONFIG.previewLineHeight;
+        
+        if (line !== '') {
+            ctx.fillStyle = colors.defaultTextColor;
+            ctx.font = `${CONFIG.previewFontSize}px monospace`;
+            ctx.textAlign = "left";
+            ctx.fillText(line, previewX + 6, currentY);
+        }
+    }
+    
+    // Draw scroll bar if needed
+    if (allWrappedLines.length > CONFIG.previewVisibleLines) {
+        drawScrollBar(ctx, previewX, previewY, previewWidth, CONFIG.previewHeight, 
+                     node.previewScrollOffset, maxScrollOffset, colors, node);
+    }
+    } catch (error) {
+        // If there's an error in preview rendering, show error message
+        const colors = getColors();
+        ctx.fillStyle = colors.errorText;
+        ctx.font = `${CONFIG.previewFontSize}px monospace`;
+        ctx.fillText("Preview Error", previewX + 6, previewY + 35);
+        console.error("Preview render error:", error);
+    }
+}
+
+function drawScrollBar(ctx, x, y, width, height, scrollOffset, maxScrollOffset, colors, node) {
+    const scrollBarX = x + width - CONFIG.scrollBarWidth - 2;
+    const scrollBarY = y + 20; // Start below the "Preview:" label
+    const scrollBarHeight = height - 25 - (CONFIG.scrollButtonHeight * 2); // Account for up/down buttons
+    
+    // Draw up scroll button
+    const upButtonY = scrollBarY;
+    drawScrollButton(ctx, scrollBarX, upButtonY, CONFIG.scrollBarWidth, CONFIG.scrollButtonHeight, '▲', colors);
+    
+    // Add clickable area for up button
+    node.clickableAreas.push({
+        x: scrollBarX,
+        y: upButtonY,
+        w: CONFIG.scrollBarWidth,
+        h: CONFIG.scrollButtonHeight,
+        action: 'scroll_up'
+    });
+    
+    // Draw scroll track
+    const trackY = scrollBarY + CONFIG.scrollButtonHeight;
+    ctx.fillStyle = colors.comfyInputBg;
+    ctx.fillRect(scrollBarX, trackY, CONFIG.scrollBarWidth, scrollBarHeight);
+    
+    // Draw scroll track border
+    ctx.strokeStyle = colors.borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(scrollBarX, trackY, CONFIG.scrollBarWidth, scrollBarHeight);
+    
+    // Calculate and draw scroll thumb
+    if (maxScrollOffset > 0) {
+        const visibleRatio = CONFIG.previewVisibleLines / (maxScrollOffset + CONFIG.previewVisibleLines);
+        const thumbHeight = Math.max(20, scrollBarHeight * visibleRatio);
+        const thumbY = trackY + (scrollBarHeight - thumbHeight) * (scrollOffset / maxScrollOffset);
+        
+        // Draw scroll thumb
+        ctx.fillStyle = colors.borderColor + "CC";
+        ctx.fillRect(scrollBarX + 1, thumbY, CONFIG.scrollBarWidth - 2, thumbHeight);
+    }
+    
+    // Draw down scroll button
+    const downButtonY = trackY + scrollBarHeight;
+    drawScrollButton(ctx, scrollBarX, downButtonY, CONFIG.scrollBarWidth, CONFIG.scrollButtonHeight, '▼', colors);
+    
+    // Add clickable area for down button
+    node.clickableAreas.push({
+        x: scrollBarX,
+        y: downButtonY,
+        w: CONFIG.scrollBarWidth,
+        h: CONFIG.scrollButtonHeight,
+        action: 'scroll_down'
+    });
+}
+
+function drawScrollButton(ctx, x, y, width, height, symbol, colors) {
+    // Draw button background
+    ctx.fillStyle = colors.comfyInputBg;
+    ctx.fillRect(x, y, width, height);
+    
+    // Draw button border
+    ctx.strokeStyle = colors.borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, width, height);
+    
+    // Draw symbol
+    ctx.fillStyle = colors.defaultTextColor;
+    ctx.font = `${height - 4}px monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(symbol, x + width/2, y + height/2);
 }
