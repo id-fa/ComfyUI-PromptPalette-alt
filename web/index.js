@@ -785,7 +785,7 @@ function generatePreview(node) {
     if (!textWidget) return "";
 
     const text = textWidget.value || "";
-    const separator = separatorWidget ? (separatorWidget.value || ", ") : ", ";
+    const separator = separatorWidget ? (separatorWidget.value !== undefined ? separatorWidget.value : ", ") : ", ";
     const addNewline = addNewlineWidget ? addNewlineWidget.value : false;
     const separatorNewline = separatorNewlineWidget ? separatorNewlineWidget.value : false;
     const trailingSeparator = trailingSeparatorWidget ? trailingSeparatorWidget.value : false;
