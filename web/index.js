@@ -864,7 +864,10 @@ function drawPreview(node, ctx) {
 
     // Draw preview background
     const colors = getColors();
-    ctx.fillStyle = colors.comfyInputBg + "80"; // Semi-transparent background
+    
+    // Ensure valid color values
+    const bgColor = colors.comfyInputBg || "#222222";
+    ctx.fillStyle = bgColor + "80"; // Semi-transparent background
     ctx.fillRect(previewX, previewY, previewWidth, CONFIG.previewHeight);
 
     // Draw preview border
@@ -919,7 +922,7 @@ function drawPreview(node, ctx) {
         const currentY = textStartY + i * CONFIG.previewLineHeight;
         
         if (line !== '') {
-            ctx.fillStyle = colors.defaultTextColor;
+            ctx.fillStyle = colors.defaultTextColor || "#dddddd";
             ctx.font = `${CONFIG.previewFontSize}px monospace`;
             ctx.textAlign = "left";
             ctx.fillText(line, previewX + 6, currentY);
@@ -931,10 +934,11 @@ function drawPreview(node, ctx) {
         drawScrollBar(ctx, previewX, previewY, previewWidth, CONFIG.previewHeight, 
                      node.previewScrollOffset, maxScrollOffset, colors, node);
     }
+    
     } catch (error) {
         // If there's an error in preview rendering, show error message
         const colors = getColors();
-        ctx.fillStyle = colors.errorText;
+        ctx.fillStyle = colors.errorText || "#ff4444";
         ctx.font = `${CONFIG.previewFontSize}px monospace`;
         ctx.fillText("Preview Error", previewX + 6, previewY + 35);
         console.error("Preview render error:", error);
@@ -961,7 +965,7 @@ function drawScrollBar(ctx, x, y, width, height, scrollOffset, maxScrollOffset, 
     
     // Draw scroll track
     const trackY = scrollBarY + CONFIG.scrollButtonHeight;
-    ctx.fillStyle = colors.comfyInputBg;
+    ctx.fillStyle = "#2a2a2a"; // Dark gray background for track
     ctx.fillRect(scrollBarX, trackY, CONFIG.scrollBarWidth, scrollBarHeight);
     
     // Draw scroll track border
@@ -976,7 +980,7 @@ function drawScrollBar(ctx, x, y, width, height, scrollOffset, maxScrollOffset, 
         const thumbY = trackY + (scrollBarHeight - thumbHeight) * (scrollOffset / maxScrollOffset);
         
         // Draw scroll thumb
-        ctx.fillStyle = colors.borderColor + "CC";
+        ctx.fillStyle = "#555555"; // Medium gray for thumb
         ctx.fillRect(scrollBarX + 1, thumbY, CONFIG.scrollBarWidth - 2, thumbHeight);
     }
     
@@ -996,7 +1000,7 @@ function drawScrollBar(ctx, x, y, width, height, scrollOffset, maxScrollOffset, 
 
 function drawScrollButton(ctx, x, y, width, height, symbol, colors) {
     // Draw button background
-    ctx.fillStyle = colors.comfyInputBg;
+    ctx.fillStyle = "#3a3a3a"; // Dark gray background for buttons
     ctx.fillRect(x, y, width, height);
     
     // Draw button border
