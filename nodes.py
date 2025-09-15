@@ -1,7 +1,7 @@
 import os
 
 
-class PromptPalette:
+class PromptPaletteAlt:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -71,6 +71,6 @@ class PromptPalette:
         return (result,)
 
 
-NODE_CLASS_MAPPINGS = {"PromptPalette": PromptPalette}
-NODE_DISPLAY_NAME_MAPPINGS = {"PromptPalette": "PromptPalette-alt"}
+NODE_CLASS_MAPPINGS = {"PromptPaletteAlt": PromptPaletteAlt}
+NODE_DISPLAY_NAME_MAPPINGS = {"PromptPaletteAlt": "PromptPalette-alt"}
 WEB_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "web")
