@@ -26,10 +26,10 @@ const CONFIG = {
 // ========================================
 
 app.registerExtension({
-    name: "PromptPalette-alt",
+    name: "PromptPalette_F",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "PromptPalette-alt") {
+        if (nodeData.name === "PromptPalette_F") {
             this.setupNodeCreatedCallback(nodeType, CONFIG, app);
             this.setupDrawForegroundCallback(nodeType, CONFIG, app);
         }
