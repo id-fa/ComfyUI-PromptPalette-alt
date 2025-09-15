@@ -1,4 +1,4 @@
-# ComfyUI PromptPalette Alt
+# ComfyUI PromptPalette-F
 
 トリガーワードやフレーズのメモをトグルでオン・オフできるComfyUI用カスタムノード
 
@@ -18,7 +18,7 @@
 
 ## 使い方
 
-1. **ノードを追加**: `Prompt-Palette-alt` ノードをワークフローに追加
+1. **ノードを追加**: `PromptPalette-F` ノードをワークフローに追加
 2. **テキスト編集**:
    - **Edit**ボタンをクリックして編集モードに切り替え
    - 1行に1つのフレーズを入力
@@ -51,7 +51,7 @@
 
 ---
 
-# ComfyUI PromptPalette alt
+# ComfyUI PromptPalette-F
 
 A custom node for ComfyUI that makes prompt editing easier by allowing phrase switching with just mouse operations
 
@@ -72,7 +72,7 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 
 ## Usage
 
-1. **Add the node**: Add the `Prompt Palette` node to your workflow
+1. **Add the node**: Add the `PromptPalette-F` node to your workflow
 2. **Edit text**:
    - Click the **Edit** button to switch to edit mode
    - Enter one phrase per line

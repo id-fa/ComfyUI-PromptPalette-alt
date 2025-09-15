@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ComfyUI-PromptPalette-alt is a custom node for ComfyUI that provides an interactive prompt editing interface with checkbox-based phrase toggling and weight adjustment controls.
+ComfyUI-PromptPalette-F is a custom node for ComfyUI that provides an interactive prompt editing interface with checkbox-based phrase toggling and weight adjustment controls.
 
 ## Architecture
 
 The project follows ComfyUI's custom node structure:
 
 - **`__init__.py`**: Standard ComfyUI entry point that imports and exports node mappings and web directory
-- **`nodes.py`**: Backend Python logic containing the `PromptPalette` class that processes text input
+- **`nodes.py`**: Backend Python logic containing the `PromptPalette_F` class that processes text input
 - **`web/index.js`**: Frontend JavaScript extension that registers with ComfyUI's app system to provide custom UI
 
 ### Core Components
 
-1. **PromptPalette Node** (`nodes.py:4-62`):
+1. **PromptPalette_F Node** (`nodes.py:4-62`):
    - Processes multiline text input by filtering commented lines (lines starting with `//` or `#`)
    - Handles inline comments by splitting on `//` and keeping only the content before
    - Uses custom separator (default: `, `) to join non-commented lines
@@ -27,8 +27,8 @@ The project follows ComfyUI's custom node structure:
    - Returns formatted string output
 
 2. **Web Extension** (`web/index.js:21-62`):
-   - Registers as ComfyUI extension named "PromptPalette"
-   - Hooks into `beforeRegisterNodeDef` to modify PromptPalette node behavior
+   - Registers as ComfyUI extension named "PromptPalette_F"
+   - Hooks into `beforeRegisterNodeDef` to modify PromptPalette_F node behavior
    - Sets up node creation callback and drawing callback
    - Manages edit/display mode toggling
 
