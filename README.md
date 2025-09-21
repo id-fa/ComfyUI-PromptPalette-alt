@@ -1,6 +1,6 @@
 # ComfyUI PromptPalette-F
 
-トリガーワードやフレーズのメモをトグルでオン・オフできるComfyUI用カスタムノード
+トリガーワードやフレーズのメモを取りつつトグルでオン・オフを切り替えできるComfyUI用カスタムノード
 
 ![Example](examples/example-alt01.png)
 
@@ -8,6 +8,7 @@
 
 - **フレーズの切り替え** - チェックボックスでのON/OFF切り替え
 - **フレーズの重み調整** - +/-ボタンでの重み調整 （※最初の単語のみ）
+- **グループ一括制御** - `[グループ名]` タグでフレーズをグループ化して一括制御
 - **カスタム区切り文字** - 結合するための区切り文字設定（デフォルト：カンマ+スペース）
 - **出力** - カスタム区切り文字で連結されたテキスト
 
@@ -26,6 +27,7 @@
 3. **フレーズ制御**:
    - 表示モードで**チェックボックス**を切り替えてフレーズを有効/無効化
    - **+/-ボタン**でフレーズの重みを調整
+   - **グループボタン**でグループ全体を一括制御
 4. **カスタム区切り文字の設定**（オプション）:
    - separatorフィールドでフレーズを結合する区切り文字を設定（デフォルト：`, `）
    - 区切り文字なし/間隔なしの場合は空文字列を使用
@@ -40,6 +42,24 @@
 ### コメントの種類
 
 - **切り替えコメント（`//`）**: `//` で始まる行はチェックボックスがOFFの状態がデフォルトになる
+- **説明コメント（`#`）**: `#` で始まる行は次のフレーズの上に説明テキストとして表示
+
+### グループ機能
+
+- **基本的な使い方**: 行の末尾に `[グループ名]` を追加してグループを作成
+- **複数グループ**: 1つのフレーズに複数のグループタグを設定可能（例：`[nature][style1]`）
+- **グループ制御**: ノード上部に表示されるグループボタンで一括制御
+- **エスケープ**: 実際の角括弧を出力したい場合は `\[` と `\]` でエスケープ
+
+#### グループ使用例:
+```
+beautiful landscape [nature-warm1]
+sunset colors [nature-warm2]
+// character design [char1]
+anime girl [char1][char2]
+high quality
+model \[v2.1\] settings [model21]
+```
 
 ### 設定項目
 - **text** - メインの入力テキスト（1行に1フレーズ）
@@ -61,6 +81,7 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 
 - **Toggle phrases** with checkboxes
 - **Adjust phrase weights** using +/- buttons
+- **Group batch control** using `[groupname]` tags to control multiple phrases at once
 - **Prefix input** to combine with generated text
 - **Custom separator** for joining phrases (default: comma + space)
 - **Output** as properly formatted text with custom separators
@@ -80,6 +101,7 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 3. **Control phrases**:
    - **Toggle checkboxes** in display mode to enable/disable phrases
    - **Adjust phrase weights** using +/- buttons
+   - **Use group buttons** for batch control of entire groups
 4. **Set custom separator** (optional):
    - Configure the separator field to join phrases (default: `, `)
    - Use empty string for no separator/spacing
@@ -93,6 +115,28 @@ A custom node for ComfyUI that makes prompt editing easier by allowing phrase sw
 
 ### Comment Types
 
-- **Toggle comments (`//`)**: Lines starting with `//` toggled off to default
+- **Toggle comments (`//`)**: Lines starting with `//` are toggled off by default
 - **Description comments (`#`)**: Lines starting with `#` appear as explanatory text above the next phrase
+
+### Group Functionality
+
+- **Basic usage**: Add `[groupname]` at the end of lines to create groups
+- **Multiple groups**: One phrase can belong to multiple groups (e.g., `[nature][style1]`)
+- **Group controls**: Group buttons appear at the top of the node for batch control
+- **Escaping**: Use `\[` and `\]` to output literal brackets
+
+#### Group Usage Example:
+```
+beautiful landscape [nature-warm1]
+sunset colors [nature-warm2]
+// character design [char1]
+anime girl [char1][char2]
+high quality
+model \[v2.1\] settings [model21]
+```
+
+**Output** (when all groups are active):
+```
+beautiful landscape, sunset colors, anime girl, high quality, model [v2.1] settings
+```
 

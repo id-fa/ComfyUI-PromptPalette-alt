@@ -16,7 +16,7 @@ The project follows ComfyUI's custom node structure:
 
 ### Core Components
 
-1. **PromptPalette_F Node** (`nodes.py:4-62`):
+1. **PromptPalette_F Node** (`nodes.py:4-77`):
    - Processes multiline text input by filtering commented lines (lines starting with `//` or `#`)
    - Handles inline comments by splitting on `//` and keeping only the content before
    - Uses custom separator (default: `, `) to join non-commented lines
@@ -24,7 +24,9 @@ The project follows ComfyUI's custom node structure:
    - Combines result with optional prefix input using the same separator
    - Supports adding newline at end of output (`add_newline` parameter)
    - Supports adding newline after separator (`separator_newline` parameter)
-   - Returns formatted string output
+   - **Group tag filtering**: Removes group tags `[group]` from output using `remove_group_tags_with_escape()` method
+   - **Escape character support**: Preserves literal brackets using `\[` and `\]` escape sequences
+   - Returns formatted string output with group tags removed
 
 2. **Web Extension** (`web/index.js:21-62`):
    - Registers as ComfyUI extension named "PromptPalette_F"
@@ -34,11 +36,12 @@ The project follows ComfyUI's custom node structure:
 
 3. **UI System**:
    - **Edit mode**: Shows standard multiline text widget, separator input, and newline options for direct editing
-   - **Display mode**: Custom-drawn interface with checkboxes, phrase text, and weight controls
-   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment
+   - **Display mode**: Custom-drawn interface with checkboxes, phrase text, weight controls, and group controls
+   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment, group toggle buttons
    - **Visual feedback**: Different colors for active/inactive text, bold text for weighted phrases
    - **Text wrapping**: Long phrases automatically wrap within node boundaries
    - **Description comments**: `#` comments display as italic explanatory text above phrases
+   - **Group controls**: Horizontal row of group buttons for batch phrase control
 
 ### Advanced Features
 
@@ -74,7 +77,15 @@ The project follows ComfyUI's custom node structure:
    - Color caching for performance
    - Handles 3-digit hex color expansion
 
-9. **Output Control System** (`nodes.py:17-19`, `web/index.js:106-153`):
+9. **Group Toggle System** (`web/index.js:31-102`, `web/index.js:620-708`):
+   - **Group tag parsing**: Extracts multiple `[group]` tags from each line
+   - **Escape character support**: Handles `\[` and `\]` for literal brackets
+   - **Group status tracking**: Monitors all/partial/none states for each group
+   - **Batch operations**: Toggle entire groups while preserving individual settings
+   - **UI integration**: Group buttons displayed above phrase list with visual status indicators
+   - **Smart toggling**: Groups with partial activation get fully activated; fully active groups get deactivated
+
+10. **Output Control System** (`nodes.py:17-19`, `web/index.js:106-153`):
    - `add_newline` parameter adds newline at end of final output
    - `separator_newline` parameter adds newline after each separator
    - `trailing_separator` parameter adds separator after the last phrase
@@ -87,36 +98,40 @@ This project requires no build process or package management - it's a pure Comfy
 
 ### Testing
 - **Manual testing**: Install in ComfyUI's `custom_nodes` directory and restart ComfyUI
-- **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling and weight adjustment
+- **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling, weight adjustment, and group controls
+- **Group testing**: Test with lines like `phrase1 [group1]`, `phrase2 [group1][group2]`, and escaped brackets `phrase \[literal\] [group1]`
 - **No automated tests**: Testing is entirely manual through the ComfyUI interface
 
 ## Development Notes
 
 - No dependencies beyond ComfyUI itself
-- UI constants are defined in `CONFIG` object (`web/index.js:3-15`)
+- UI constants are defined in `CONFIG` object (`web/index.js:3-25`)
 - Click handling uses coordinate-based area detection system
 - All state changes trigger canvas redraws via `app.graph.setDirtyCanvas(true)`
+- Group functionality requires no additional dependencies
 
 ## Key Patterns
 
 - **Comment system**: `//` for toggle comments (filtered/unfiltered), `#` for description comments (display only)
+- **Group system**: `[group]` tags for batch phrase control, support for multiple tags per line, escape with `\[` `\]`
 - **Custom separator**: Configurable text joining with empty string support for no spacing
 - **Output formatting options**: `add_newline` for end-of-output newline, `separator_newline` for separator newlines, `trailing_separator` for separator after last phrase
 - **Text wrapping**: Word-based wrapping with dynamic width calculation and height adjustment
 - **Weight adjustment**: Uses regex parsing to handle `(text:weight)` notation
-- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons)
+- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons, group buttons)
 - **State management**: Node tracks edit mode, clickable areas, widget visibility, and text wrapping
 - **Canvas redrawing**: Triggered via `app.graph.setDirtyCanvas(true)` after state changes
 
 ## Code Organization
 
-- **Extension Registration**: Lines 21-62
-- **UI Control Functions**: Lines 68-179 (widget management, click handling)
-- **Text Wrapping Utilities**: Lines 200-232 (text wrapping, width calculation)
-- **Drawing Functions**: Lines 235-422 (canvas rendering, visual elements, comment display)
-- **Comment Parsing**: Lines 343-357 (description comment handling)
-- **Weight System**: Lines 425-480 (parsing, adjustment, formatting)
-- **Theme/Color System**: Lines 481-525 (dynamic theme integration)
+- **Group Parsing Functions**: Lines 31-102 (group tag extraction, status tracking, toggle logic)
+- **Extension Registration**: Lines 125-147
+- **UI Control Functions**: Lines 148-363 (widget management, click handling)
+- **Text Wrapping Utilities**: Lines 383-432 (text wrapping, width calculation)
+- **Drawing Functions**: Lines 445-708 (canvas rendering, group controls, visual elements)
+- **Comment Parsing**: Lines 608-632 (description comment handling)
+- **Weight System**: Lines 735-790 (parsing, adjustment, formatting)
+- **Theme/Color System**: Lines 791-835 (dynamic theme integration)
 
 ## Installation & Usage
 

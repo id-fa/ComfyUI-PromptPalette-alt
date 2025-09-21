@@ -19,7 +19,107 @@ const CONFIG = {
     previewVisibleLines: 5,  // Number of visible lines in preview
     scrollBarWidth: 12,      // Width of scroll bar
     scrollButtonHeight: 16,  // Height of scroll up/down buttons
+    groupButtonHeight: 20,   // Height of group toggle buttons
+    groupButtonMargin: 4,    // Margin between group buttons
+    groupAreaHeight: 28,     // Total height for group control area
 };
+
+// ========================================
+// Group Parsing Functions
+// ========================================
+
+function parseGroupTags(line) {
+    // Handle escaped brackets by temporarily replacing them
+    const escaped = line.replace(/\\\[/g, '___ESC_OPEN___').replace(/\\\]/g, '___ESC_CLOSE___');
+    const tagRegex = /\[([^\]]+)\]/g;
+    const groups = [];
+    let match;
+    while ((match = tagRegex.exec(escaped)) !== null) {
+        groups.push(match[1]);
+    }
+    return groups;
+}
+
+function removeGroupTags(line) {
+    // Handle escaped brackets while removing group tags
+    // 1. Replace escaped brackets with placeholders
+    let processed = line.replace(/\\\[/g, '___ESC_OPEN___').replace(/\\\]/g, '___ESC_CLOSE___');
+
+    // 2. Remove group tags
+    processed = processed.replace(/\s*\[[^\]]+\]/g, '');
+
+    // 3. Restore escaped brackets as literal brackets
+    processed = processed.replace(/___ESC_OPEN___/g, '[').replace(/___ESC_CLOSE___/g, ']');
+
+    return processed.trim();
+}
+
+function getAllGroups(text) {
+    const allGroups = new Set();
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+        if (line.trim() && !line.trim().startsWith('#')) {
+            const groups = parseGroupTags(line);
+            groups.forEach(group => allGroups.add(group));
+        }
+    }
+
+    return Array.from(allGroups).sort();
+}
+
+function getGroupStatus(text, groupName) {
+    const lines = text.split('\n');
+    let totalLines = 0;
+    let activeLines = 0;
+
+    for (const line of lines) {
+        if (line.trim() && !line.trim().startsWith('#')) {
+            const groups = parseGroupTags(line);
+            if (groups.includes(groupName)) {
+                totalLines++;
+                if (!line.trim().startsWith('//')) {
+                    activeLines++;
+                }
+            }
+        }
+    }
+
+    if (totalLines === 0) return 'none';
+    if (activeLines === totalLines) return 'all';
+    if (activeLines === 0) return 'none';
+    return 'partial';
+}
+
+function toggleGroup(text, groupName) {
+    const lines = text.split('\n');
+    const status = getGroupStatus(text, groupName);
+
+    // Smart toggle behavior:
+    // - If all lines are active (status='all'), deactivate all
+    // - If some or none are active (status='partial' or 'none'), activate all
+    const shouldActivate = status !== 'all';
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim() && !line.trim().startsWith('#')) {
+            const groups = parseGroupTags(line);
+            if (groups.includes(groupName)) {
+                if (shouldActivate && line.trim().startsWith('//')) {
+                    // Activate: remove comment
+                    lines[i] = line.replace(/^\s*\/\/\s*/, '');
+                } else if (!shouldActivate && !line.trim().startsWith('//')) {
+                    // Deactivate: add comment
+                    lines[i] = '// ' + line;
+                }
+                // Note: Lines that are already in the desired state are left unchanged
+                // This allows for individual toggling after group operations
+            }
+        }
+    }
+
+    return lines.join('\n');
+}
 
 // ========================================
 // Extension Registration
@@ -184,9 +284,11 @@ function addEditButton(node, textWidget, app) {
 }
 
 function setupClickHandler(node, textWidget, app) {
-    // Initialize clickableAreas
-    node.clickableAreas = [];
-    
+    // Initialize clickableAreas if it doesn't exist
+    if (!node.clickableAreas) {
+        node.clickableAreas = [];
+    }
+
     // Add helper methods to node
     node.findClickedArea = findClickedArea;
     node.handleClickableAreaAction = handleClickableAreaAction;
@@ -252,6 +354,12 @@ function handleClickableAreaAction(area, textWidget, app) {
             // Max scroll will be calculated in drawPreview
             this.previewScrollOffset = this.previewScrollOffset + 1;
             app.graph.setDirtyCanvas(true);
+            break;
+        case 'group_toggle':
+            if (textWidget && area.groupName) {
+                textWidget.value = toggleGroup(textWidget.value, area.groupName);
+                app.graph.setDirtyCanvas(true);
+            }
             break;
     }
 }
@@ -343,6 +451,16 @@ function drawCheckboxList(node, ctx, text, app) {
     }
 
     const lines = text.split('\n');
+    const groups = getAllGroups(text);
+
+    // Initialize clickable areas
+    node.clickableAreas = [];
+
+    // Draw group control area if groups exist
+    let groupAreaHeight = 0;
+    if (groups.length > 0) {
+        groupAreaHeight = drawGroupControls(node, ctx, text, groups);
+    }
     
     // Calculate total lines including wrapped lines
     let totalWrappedLines = 0;
@@ -376,8 +494,8 @@ function drawCheckboxList(node, ctx, text, app) {
         totalWrappedLines += wrappedLines.length;
     });
     
-    // Adjust node size to match wrapped text line count + preview area (if shown)
-    const baseTextHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + totalWrappedLines * CONFIG.lineHeight + 20);
+    // Adjust node size to match wrapped text line count + preview area (if shown) + group area
+    const baseTextHeight = Math.max(CONFIG.minNodeHeight, CONFIG.topNodePadding + groupAreaHeight + totalWrappedLines * CONFIG.lineHeight + 20);
     const widgetSpacing = 70; // Space for ComfyUI widgets (buttons)
     const previewHeight = node.hidePreview ? 0 : (CONFIG.previewSeparator + CONFIG.previewHeight);
     const totalHeight = baseTextHeight + widgetSpacing + previewHeight;
@@ -406,13 +524,14 @@ function drawCheckboxList(node, ctx, text, app) {
 }
 
 function drawCheckboxItems(ctx, lines, node) {
-    // Clear clickableAreas before redrawing
-    if (node) {
-        node.clickableAreas = [];
-    }
-    
-    let currentY = CONFIG.topNodePadding;
+    // Get group area height to offset drawing position
+    const groups = getAllGroups(lines.join('\n'));
+    const groupAreaHeight = groups.length > 0 ? CONFIG.groupAreaHeight : 0;
+
+    let currentY = CONFIG.topNodePadding + groupAreaHeight;
     const availableWidth = calculateAvailableTextWidth(node.size[0]);
+
+    // Don't clear clickableAreas here - group controls have already been added
     
     lines.forEach((line, index) => {
         // Skip empty lines and description comments (# comments are not drawn directly)
@@ -510,8 +629,83 @@ function getPhraseText(line, isCommented) {
     if (phraseText.trim().endsWith(',')) {
         phraseText = phraseText.substring(0, phraseText.lastIndexOf(','));
     }
-    
+
+    // Remove group tags from display text
+    phraseText = removeGroupTags(phraseText);
+
     return phraseText;
+}
+
+function drawGroupControls(node, ctx, text, groups) {
+    if (groups.length === 0) return 0;
+
+    const y = CONFIG.topNodePadding;
+    const buttonHeight = CONFIG.groupButtonHeight;
+    const margin = CONFIG.groupButtonMargin;
+    let currentX = CONFIG.sideNodePadding;
+
+    ctx.font = `${CONFIG.fontSize - 2}px monospace`;
+    ctx.textAlign = "center";
+
+    groups.forEach((groupName, index) => {
+        const status = getGroupStatus(text, groupName);
+        const buttonWidth = ctx.measureText(`[${groupName}]`).width + 16;
+
+        // Determine button color based on status
+        let fillColor, borderColor, textColor;
+        const colors = getColors();
+
+        switch (status) {
+            case 'all':
+                fillColor = colors.checkboxFillColor;
+                textColor = colors.checkboxSymbolColor;
+                borderColor = colors.checkboxFillColor;
+                break;
+            case 'partial':
+                fillColor = colors.weightButtonFillColor;
+                textColor = colors.defaultTextColor;
+                borderColor = colors.checkboxFillColor;
+                break;
+            case 'none':
+                fillColor = 'transparent';
+                textColor = colors.inactiveTextColor;
+                borderColor = colors.checkboxBorderColor;
+                break;
+        }
+
+        // Draw button background
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(currentX, y, buttonWidth, buttonHeight, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw button text
+        ctx.fillStyle = textColor;
+        const textX = currentX + buttonWidth / 2;
+        const textY = y + buttonHeight / 2 + (CONFIG.fontSize - 2) * 0.35;
+        ctx.fillText(`[${groupName}]`, textX, textY);
+
+        // Add clickable area
+        if (node) {
+            node.clickableAreas.push({
+                x: currentX,
+                y: y,
+                w: buttonWidth,
+                h: buttonHeight,
+                type: 'group_toggle',
+                groupName: groupName,
+                action: 'group_toggle'
+            });
+        }
+
+        currentX += buttonWidth + margin;
+    });
+
+    ctx.textAlign = "left"; // Reset alignment
+    return CONFIG.groupAreaHeight;
 }
 
 function drawCheckbox(ctx, y, isCommented, node, lineIndex) {

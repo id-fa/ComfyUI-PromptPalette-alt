@@ -1,4 +1,5 @@
 import os
+import re
 
 
 class PromptPalette_F:
@@ -24,6 +25,21 @@ class PromptPalette_F:
     FUNCTION = "process"
     CATEGORY = "utils"
 
+    def remove_group_tags_with_escape(self, line):
+        """Remove group tags [group] while preserving escaped brackets \[ \]"""
+        # 1. Replace escaped brackets with placeholders
+        line = line.replace(r'\[', '___ESC_OPEN___')
+        line = line.replace(r'\]', '___ESC_CLOSE___')
+
+        # 2. Remove group tags
+        line = re.sub(r'\s*\[[^\]]+\]', '', line)
+
+        # 3. Restore escaped brackets as literal brackets
+        line = line.replace('___ESC_OPEN___', '[')
+        line = line.replace('___ESC_CLOSE___', ']')
+
+        return line.strip()
+
     def process(self, text, prefix=None, separator=", ", add_newline=False, separator_newline=False, trailing_separator=False):
         lines = text.split("\n")
         filtered_lines = []
@@ -37,7 +53,10 @@ class PromptPalette_F:
             # Remove inline comments
             if "//" in line:
                 line = line.split("//")[0].rstrip()
-            filtered_lines.append(line.rstrip())
+            # Remove group tags [group] from line with escape support
+            line = self.remove_group_tags_with_escape(line)
+            if line:  # Only add non-empty lines after tag removal
+                filtered_lines.append(line)
         
         # Join with custom separator
         if separator == "":
