@@ -37,11 +37,11 @@ The project follows ComfyUI's custom node structure:
 3. **UI System**:
    - **Edit mode**: Shows standard multiline text widget, separator input, and newline options for direct editing
    - **Display mode**: Custom-drawn interface with checkboxes, phrase text, weight controls, and group controls
-   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment, group toggle buttons
+   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment, group toggle buttons, global toggle buttons
    - **Visual feedback**: Different colors for active/inactive text, bold text for weighted phrases
    - **Text wrapping**: Long phrases automatically wrap within node boundaries
    - **Description comments**: `#` comments display as italic explanatory text above phrases
-   - **Group controls**: Horizontal row of group buttons for batch phrase control
+   - **Group controls**: Horizontal row with global `[all]`/`[off]` buttons (green/red) followed by group buttons for batch phrase control
 
 ### Advanced Features
 
@@ -84,6 +84,7 @@ The project follows ComfyUI's custom node structure:
    - **Batch operations**: Toggle entire groups while preserving individual settings
    - **UI integration**: Group buttons displayed above phrase list with visual status indicators
    - **Smart toggling**: Groups with partial activation get fully activated; fully active groups get deactivated
+   - **Global toggle buttons**: `[all]` (green) and `[off]` (red) buttons for toggling all phrases at once
 
 10. **Output Control System** (`nodes.py:17-19`, `web/index.js:106-153`):
    - `add_newline` parameter adds newline at end of final output
@@ -98,8 +99,9 @@ This project requires no build process or package management - it's a pure Comfy
 
 ### Testing
 - **Manual testing**: Install in ComfyUI's `custom_nodes` directory and restart ComfyUI
-- **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling, weight adjustment, and group controls
+- **UI verification**: Test through ComfyUI's interface - create node, toggle edit/display modes, test phrase toggling, weight adjustment, group controls, and global toggle buttons
 - **Group testing**: Test with lines like `phrase1 [group1]`, `phrase2 [group1][group2]`, and escaped brackets `phrase \[literal\] [group1]`
+- **Global toggle testing**: Test `[all]` and `[off]` buttons to ensure all phrases toggle correctly
 - **No automated tests**: Testing is entirely manual through the ComfyUI interface
 
 ## Development Notes
@@ -118,7 +120,7 @@ This project requires no build process or package management - it's a pure Comfy
 - **Output formatting options**: `add_newline` for end-of-output newline, `separator_newline` for separator newlines, `trailing_separator` for separator after last phrase
 - **Text wrapping**: Word-based wrapping with dynamic width calculation and height adjustment
 - **Weight adjustment**: Uses regex parsing to handle `(text:weight)` notation
-- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons, group buttons)
+- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons, group buttons, global toggle buttons)
 - **State management**: Node tracks edit mode, clickable areas, widget visibility, and text wrapping
 - **Canvas redrawing**: Triggered via `app.graph.setDirtyCanvas(true)` after state changes
 
