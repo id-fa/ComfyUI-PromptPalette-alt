@@ -166,6 +166,30 @@ function toggleGroup(text, groupName) {
     return lines.join('\n');
 }
 
+function toggleAllPhrases(text, activate) {
+    const lines = text.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Skip empty lines and description comments (# comments)
+        if (line.trim() === '' || line.trim().startsWith('#')) {
+            continue;
+        }
+
+        const isCommented = line.trim().startsWith('//');
+
+        if (activate && isCommented) {
+            // Turn ON: remove comment
+            lines[i] = line.replace(/^\s*\/\/\s*/, '');
+        } else if (!activate && !isCommented) {
+            // Turn OFF: add comment
+            lines[i] = '// ' + line;
+        }
+    }
+
+    return lines.join('\n');
+}
+
 // ========================================
 // Extension Registration
 // ========================================
@@ -403,6 +427,18 @@ function handleClickableAreaAction(area, textWidget, app) {
         case 'group_toggle':
             if (textWidget && area.groupName) {
                 textWidget.value = toggleGroup(textWidget.value, area.groupName);
+                app.graph.setDirtyCanvas(true);
+            }
+            break;
+        case 'all_on':
+            if (textWidget) {
+                textWidget.value = toggleAllPhrases(textWidget.value, true);
+                app.graph.setDirtyCanvas(true);
+            }
+            break;
+        case 'all_off':
+            if (textWidget) {
+                textWidget.value = toggleAllPhrases(textWidget.value, false);
                 app.graph.setDirtyCanvas(true);
             }
             break;
@@ -691,6 +727,60 @@ function drawGroupControls(node, ctx, text, groups) {
 
     ctx.font = `${CONFIG.fontSize - 2}px monospace`;
     ctx.textAlign = "center";
+
+    // Draw "All ON" and "All OFF" buttons first
+    const allOnWidth = ctx.measureText("[all]").width + 16;
+    const allOffWidth = ctx.measureText("[off]").width + 16;
+
+    // Draw All ON button
+    ctx.fillStyle = "#4CAF50"; // Green background for All ON
+    ctx.strokeStyle = "#4CAF50";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(currentX, y, allOnWidth, buttonHeight, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff"; // White text for All ON
+    const allOnTextX = currentX + allOnWidth / 2;
+    const allOnTextY = y + buttonHeight / 2 + (CONFIG.fontSize - 2) * 0.35;
+    ctx.fillText("[all]", allOnTextX, allOnTextY);
+
+    // Add clickable area for All ON
+    node.clickableAreas.push({
+        x: currentX,
+        y: y,
+        w: allOnWidth,
+        h: buttonHeight,
+        action: 'all_on'
+    });
+
+    currentX += allOnWidth + margin;
+
+    // Draw All OFF button
+    ctx.fillStyle = "#f44336"; // Red background for All OFF
+    ctx.strokeStyle = "#f44336";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(currentX, y, allOffWidth, buttonHeight, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff"; // White text for All OFF
+    const allOffTextX = currentX + allOffWidth / 2;
+    const allOffTextY = y + buttonHeight / 2 + (CONFIG.fontSize - 2) * 0.35;
+    ctx.fillText("[off]", allOffTextX, allOffTextY);
+
+    // Add clickable area for All OFF
+    node.clickableAreas.push({
+        x: currentX,
+        y: y,
+        w: allOffWidth,
+        h: buttonHeight,
+        action: 'all_off'
+    });
+
+    currentX += allOffWidth + margin * 2; // Extra margin before group buttons
 
     groups.forEach((groupName, index) => {
         const status = getGroupStatus(text, groupName);
