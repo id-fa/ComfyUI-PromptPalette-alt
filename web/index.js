@@ -105,59 +105,14 @@ function toggleGroup(text, groupName) {
         if (line.trim() && !line.trim().startsWith('#')) {
             const groups = parseGroupTags(line);
             if (groups.includes(groupName)) {
-                // Check if this line has multiple groups
-                if (groups.length > 1) {
-                    // For lines with multiple groups, only toggle if:
-                    // 1. We're activating and the line is currently commented, OR
-                    // 2. We're deactivating and ALL other groups on this line would also be deactivated
-                    if (shouldActivate && line.trim().startsWith('//')) {
-                        // Activate: remove comment (affects all groups on this line)
-                        lines[i] = line.replace(/^\s*\/\/\s*/, '');
-                    } else if (!shouldActivate && !line.trim().startsWith('//')) {
-                        // Check if any other group on this line would remain active
-                        const otherGroups = groups.filter(g => g !== groupName);
-                        let shouldDeactivate = true;
+                const isCommented = line.trim().startsWith('//');
 
-                        // For each other group on this line, check if it has active lines elsewhere
-                        // If any other group has active lines, don't deactivate this shared line
-                        for (const otherGroup of otherGroups) {
-                            // Count active lines for this other group
-                            let otherGroupActiveLines = 0;
-                            let otherGroupTotalLines = 0;
-
-                            for (const checkLine of lines) {
-                                if (checkLine.trim() && !checkLine.trim().startsWith('#')) {
-                                    const checkGroups = parseGroupTags(checkLine);
-                                    if (checkGroups.includes(otherGroup)) {
-                                        otherGroupTotalLines++;
-                                        if (!checkLine.trim().startsWith('//')) {
-                                            otherGroupActiveLines++;
-                                        }
-                                    }
-                                }
-                            }
-
-                            // If this other group has at least one active line, keep this shared line active
-                            if (otherGroupActiveLines > 0) {
-                                shouldDeactivate = false;
-                                break;
-                            }
-                        }
-
-                        if (shouldDeactivate) {
-                            // Deactivate: add comment
-                            lines[i] = '// ' + line;
-                        }
-                    }
-                } else {
-                    // Single group - behave normally
-                    if (shouldActivate && line.trim().startsWith('//')) {
-                        // Activate: remove comment
-                        lines[i] = line.replace(/^\s*\/\/\s*/, '');
-                    } else if (!shouldActivate && !line.trim().startsWith('//')) {
-                        // Deactivate: add comment
-                        lines[i] = '// ' + line;
-                    }
+                if (shouldActivate && isCommented) {
+                    // Activate: remove comment
+                    lines[i] = line.replace(/^\s*\/\/\s*/, '');
+                } else if (!shouldActivate && !isCommented) {
+                    // Deactivate: add comment
+                    lines[i] = '// ' + line;
                 }
             }
         }
