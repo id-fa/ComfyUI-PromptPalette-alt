@@ -38,7 +38,8 @@ The project follows ComfyUI's custom node structure:
 3. **UI System**:
    - **Edit mode**: Shows standard multiline text widget, separator input, and newline options for direct editing
    - **Display mode**: Custom-drawn interface with checkboxes, phrase text, weight controls, and group controls
-   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment, group toggle buttons, global toggle buttons
+   - **Interactive elements**: Checkboxes for toggling comments, +/- buttons for weight adjustment, group toggle buttons, global toggle buttons, clickable text areas
+   - **Row selection**: Click anywhere on phrase text to toggle (excludes weight control buttons on right)
    - **Visual feedback**: Different colors for active/inactive text, bold text for weighted phrases
    - **Text wrapping**: Long phrases automatically wrap within node boundaries
    - **Description comments**: `#` comments display as italic explanatory text above phrases
@@ -81,15 +82,16 @@ The project follows ComfyUI's custom node structure:
    - Handles 3-digit hex color expansion (`expandHexColor()`)
    - Theme colors sourced from `getComfyUIThemeColors()`
 
-9. **Group Toggle System** (`web/index.js:31-191`):
+9. **Group Toggle System** (`web/index.js:31-147`):
    - **Group tag parsing**: Extracts multiple `[group]` tags from each line (`parseGroupTags()`, lines 31-41)
    - **Escape character support**: Handles `\[` and `\]` for literal brackets (`removeGroupTags()`, lines 43-55)
    - **Group status tracking**: Monitors all/partial/none states for each group (`getGroupStatus()`, lines 71-92)
-   - **Batch operations**: Toggle entire groups while preserving individual settings (`toggleGroup()`, lines 94-167)
-   - **Global toggle operations**: `toggleAllPhrases()` function for all-on/all-off functionality (lines 169-191)
-   - **UI integration**: Group buttons displayed above phrase list with visual status indicators (`drawGroupControls()`, lines 720-844)
+   - **Batch operations**: Simplified toggle logic for all lines in a group (`toggleGroup()`, lines 94-122)
+   - **Global toggle operations**: `toggleAllPhrases()` function for all-on/all-off functionality (lines 124-147)
+   - **UI integration**: Group buttons displayed above phrase list with visual status indicators (`drawGroupControls()`, lines 693-862)
    - **Smart toggling**: Groups with partial activation get fully activated; fully active groups get deactivated
    - **Global toggle buttons**: `[all]` (green) and `[off]` (red) buttons for toggling all phrases at once
+   - **Multi-group support**: Handles lines with multiple group tags correctly without interference between groups
 
 10. **Output Control System** (`nodes.py:17-20`, `web/index.js:310-352`):
    - `add_newline` parameter adds newline at end of final output
@@ -137,7 +139,8 @@ This project requires no build process or package management - it's a pure Comfy
 - **Output formatting options**: `add_newline` for end-of-output newline, `separator_newline` for separator newlines, `trailing_separator` for separator after last phrase
 - **Text wrapping**: Word-based wrapping with dynamic width calculation and height adjustment
 - **Weight adjustment**: Uses regex parsing to handle `(text:weight)` notation
-- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, weight buttons, group buttons, global toggle buttons)
+- **Canvas interaction**: Mouse clicks are mapped to clickable areas (checkboxes, text areas, weight buttons, group buttons, global toggle buttons)
+- **Row selection**: Entire phrase text area is clickable for toggling (excluding weight controls on right edge)
 - **State management**: Node tracks edit mode, clickable areas, widget visibility, and text wrapping
 - **Canvas redrawing**: Triggered via `app.graph.setDirtyCanvas(true)` after state changes
 
@@ -145,15 +148,15 @@ This project requires no build process or package management - it's a pure Comfy
 
 ### web/index.js Structure:
 - **Configuration**: Lines 3-25 (CONFIG object with UI constants)
-- **Group Parsing Functions**: Lines 31-191 (group tag extraction, status tracking, toggle logic, global toggles)
-- **Extension Registration**: Lines 197-254 (ComfyUI extension setup, callbacks)
-- **UI Control Functions**: Lines 260-446 (widget management, click handling, interaction)
-- **Text Wrapping Utilities**: Lines 493-522 (text wrapping, width calculation)
-- **Drawing Functions**: Lines 528-1000 (canvas rendering, checkboxes, phrases, group controls, weight buttons)
-- **Comment Parsing**: Lines 678-696 (description comment handling)
-- **Weight System**: Lines 1005-1056 (parsing, adjustment, formatting)
-- **Theme/Color System**: Lines 1062-1101 (dynamic theme integration, color caching)
-- **Preview System**: Lines 1107-1346 (preview generation, rendering, scrolling)
+- **Group Parsing Functions**: Lines 31-147 (group tag extraction, status tracking, simplified toggle logic, global toggles)
+- **Extension Registration**: Lines 149-206 (ComfyUI extension setup, callbacks)
+- **UI Control Functions**: Lines 212-398 (widget management, click handling, interaction)
+- **Text Wrapping Utilities**: Lines 445-474 (text wrapping, width calculation)
+- **Drawing Functions**: Lines 480-952 (canvas rendering, checkboxes, phrases, group controls, weight buttons, clickable text areas)
+- **Comment Parsing**: Lines 650-664 (description comment handling)
+- **Weight System**: Lines 957-1008 (parsing, adjustment, formatting)
+- **Theme/Color System**: Lines 1014-1053 (dynamic theme integration, color caching)
+- **Preview System**: Lines 1059-1298 (preview generation, rendering, scrolling)
 
 ### nodes.py Structure:
 - **Class Definition**: Lines 5-91 (PromptPalette_F class)
@@ -169,8 +172,17 @@ Standard ComfyUI custom node installation - clone into `custom_nodes` directory 
 - Basic functionality: ✅ Working
 - Preview functionality: ✅ Working (white screen bug resolved)
 - Scroll functionality: ✅ Working (scroll bar visibility fixed)
+- Group toggle: ✅ Working (multi-group interference bug resolved)
+- Row selection: ✅ Working (clickable text areas implemented)
 
 ## Fixed Issues
+
+### Group Toggle Bug with Multiple Tags (Resolved - 2025)
+- **Issue**: Groups that only appear on lines with multiple group tags (e.g., `[group_a2]` appearing only with `[group_a]`) could be turned ON but not OFF
+- **Root Cause**: Complex logic in `toggleGroup()` was checking if other groups on the same line had active lines elsewhere, preventing deactivation
+- **Solution**: Simplified `toggleGroup()` to directly toggle all lines containing the target group, regardless of other groups
+- **Status**: ✅ Resolved
+- **Code Location**: `web/index.js:94-122`
 
 ### Preview White Screen Bug (Resolved)
 - **Issue**: Preview area showed white screen when weight feature was used (e.g., `(line:1.1)`)
@@ -183,6 +195,6 @@ Standard ComfyUI custom node installation - clone into `custom_nodes` directory 
 - **Root Cause**: Scroll bar colors using theme values that appeared white in certain contexts
 - **Solution**: Changed to fixed dark colors for scroll components:
   - Track background: `#2a2a2a` (dark gray)
-  - Scroll thumb: `#555555` (medium gray) 
+  - Scroll thumb: `#555555` (medium gray)
   - Scroll buttons: `#3a3a3a` (dark gray)
 - **Status**: ✅ Resolved

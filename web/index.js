@@ -615,16 +615,33 @@ function drawCheckboxItems(ctx, lines, node) {
         
         // Draw checkbox (only on first line)
         drawCheckbox(ctx, currentY, isCommented, node, index);
-        
+
+        // Calculate weight controls area to exclude from text clickable area
+        const nodeWidth = node.size[0];
+        const weightControlsWidth = CONFIG.weightButtonSize * 2 + CONFIG.weightLabelWidth + 12; // 2 buttons + label + margins
+        const textClickableWidth = nodeWidth - CONFIG.sideNodePadding - CONFIG.checkboxSize - CONFIG.spaceBetweenCheckboxAndText - weightControlsWidth - CONFIG.sideNodePadding;
+
+        // Add clickable area for text (only on first wrapped line to avoid multiple triggers)
+        const textStartX = CONFIG.sideNodePadding + CONFIG.checkboxSize + CONFIG.spaceBetweenCheckboxAndText;
+        node.clickableAreas.push({
+            x: textStartX,
+            y: currentY,
+            w: textClickableWidth,
+            h: CONFIG.lineHeight,
+            type: 'text_toggle',
+            lineIndex: index,
+            action: 'toggle'
+        });
+
         // Draw wrapped text lines
         wrappedLines.forEach((wrappedLine, wrapIndex) => {
             const lineY = currentY + wrapIndex * CONFIG.lineHeight;
             drawPhraseTextLine(ctx, wrappedLine, lineY, isCommented, isBold);
         });
-        
+
         // Draw weight controls (only on first line)
         drawWeightControls(ctx, currentY, line, isCommented, node, index);
-        
+
         // Move to next position
         currentY += wrappedLines.length * CONFIG.lineHeight;
     });
